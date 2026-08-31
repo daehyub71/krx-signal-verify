@@ -1,0 +1,56 @@
+digraph web {
+  graph [fontname="Apple SD Gothic Neo", fontsize=13, rankdir=TB, nodesep=0.4, ranksep=0.6, pad=0.4, bgcolor="white", compound=true,
+         label="krx-signal-verify — 웹의 데이터 접근과 온디맨드 경로 v0.1 (PLAN §4 · SPEC V8·V9·V10)\l선행에서 공개 anon 키로 브리핑 15행이 통째로 읽혔다(2026-08-31). 그 구멍을 다시 열지 않는 것이 이 그림의 목적이다.\l", labelloc=t, labeljust=l];
+  node  [fontname="Apple SD Gothic Neo", fontsize=12, shape=box, style="rounded,filled", fillcolor="#F4F6FA", color="#3D465F", penwidth=1.2, margin="0.18,0.1"];
+  edge  [fontname="Apple SD Gothic Neo", fontsize=10, color="#3D465F", arrowsize=0.8];
+
+  user [shape=circle, width=0.7, label=<본인<br/><font point-size="9">1명</font>>, fillcolor="#121829", fontcolor="white", color="#121829"];
+
+  subgraph cluster_browser {
+    label=<<b>브라우저</b>  — <b>여기에는 DB 자격증명이 하나도 없다</b>>; style="rounded,filled"; fillcolor="#FAFBFD"; color="#C5CAD6";
+    cli [label=<렌더된 HTML + 최소 JS<br/><font point-size="10">필터·정렬은 서버가 준 데이터 위에서만</font>>, fillcolor="#FFFFFF"];
+  }
+
+  subgraph cluster_vercel {
+    label=<<b>Vercel</b>  — <b>SSO 배포 보호를 켠 채 둔다</b> (V10 · 끄지 않는다)>; style="rounded,filled"; fillcolor="#EEF3FA"; color="#7C9CC4";
+    sso [label=<<b>배포 보호 (SSO)</b><br/><font point-size="10">본인 계정 로그인 없이는 페이지 자체가 안 열린다</font>>, fillcolor="#FAEFD8", color="#E0B458"];
+    rsc [label=<<b>서버 컴포넌트</b> app/**/page.tsx<br/><font point-size="10">DB 조회는 <b>전부 여기서</b> 일어난다</font>>, fillcolor="#FFFFFF"];
+    db  [label=<<b>lib/db.ts</b><br/><font point-size="10">전용 읽기 롤 자격증명 (서버 전용 env)<br/><b>NEXT_PUBLIC_ 접두어를 쓰지 않는다</b></font>>, fillcolor="#FFFFFF", penwidth=2];
+    api [label=<app/api/verify/route.ts<br/><font point-size="10">온디맨드 요청 — 라우트 핸들러(서버)</font>>, fillcolor="#FFFFFF"];
+    sso -> rsc; rsc -> db; sso -> api;
+  }
+
+  subgraph cluster_db {
+    label=<<b>Supabase</b>  (네 프로젝트가 공유 — 접두어는 권한 분리가 아니다)>; style="rounded,filled"; fillcolor="#FAFBFD"; color="#C5CAD6";
+    role [label=<<b>전용 읽기 롤</b>  ksv_reader<br/><font point-size="10">GRANT SELECT ON ksv_* 만<br/><b>폭발 반경이 ksv_*로 제한된다</b></font>>, fillcolor="#EAF7EC", penwidth=2];
+    svc  [label=<service_role<br/><font point-size="10">배치 전용 — 쓰기<br/>웹에 주지 않는다</font>>, fillcolor="#FFF4E0"];
+    anon [label=<<b>anon 키 (공개됨)</b><br/><font point-size="10">상위 krx-stock-charts 웹 번들에 실려 있다</font>>, fillcolor="#F9E7E5", color="#C9283E", penwidth=2];
+    ksv  [label=<<b>ksv_*</b> 6개 테이블<br/><font point-size="10">RLS 켬 · <b>정책 없음</b></font>>, fillcolor="#EEF0F5"];
+    other [label=<다른 프로젝트 테이블<br/><font point-size="10">profiles · ksa_* · ksc_* · ut_* …</font>>, fillcolor="#EEF0F5"];
+    role -> ksv [label=" SELECT", color="#2E7D32", fontcolor="#2E7D32"];
+    svc  -> ksv [label=" 읽기·쓰기 (RLS 우회)", color="#626D8A"];
+    anon -> ksv [label="  ✕ 정책이 없어 0행", color="#C9283E", fontcolor="#C9283E", style=dashed];
+    role -> other [label="  ✕ grant 없음", color="#C9283E", fontcolor="#C9283E", style=dashed];
+  }
+
+  subgraph cluster_batch {
+    label=<<b>배치</b>  (GitHub Actions)>; style="rounded,filled"; fillcolor="#FFFBF2"; color="#E0B458";
+    wf [label=<verify.yml<br/><font point-size="10">repository_dispatch로 깬다 — <b>약 1분</b><br/>정기(상위 alert 완료) + 온디맨드 두 경로</font>>, fillcolor="#FFF4E0"];
+  }
+
+  user -> sso [label="  로그인"];
+  sso -> cli [label="  통과한 뒤에만", dir=back];
+  rsc -> cli [label="  렌더 결과만 내려간다\l  (자격증명은 서버에 남는다)", color="#1F63A8", fontcolor="#1F63A8"];
+  db -> role [label="  이 롤로 접속", color="#1F63A8", fontcolor="#1F63A8", penwidth=1.6];
+  api -> ksv [label="  ksv_requests insert", color="#2E7D32", fontcolor="#2E7D32"];
+  api -> wf  [label="  repository_dispatch\l  (fine-grained PAT · Contents write · 리포 1개)", color="#6C4FC4", fontcolor="#6C4FC4", penwidth=1.6];
+  wf -> svc  [label="  service_role로 결과 기록", color="#626D8A"];
+
+  n1 [shape=note, fillcolor="#F9E7E5", color="#C9283E", fontsize=10,
+      label="배제한 안 — anon + RLS 정책\n표준적인 Supabase 방식이지만, 그 키는 이미 공개돼 있다.\n선행에서 정확히 이 구성으로 브리핑 15행이 읽혔다.\n\n배제한 안 — service_role을 웹에\n구현은 가장 쉽지만 공유 Supabase 전체를 우회한다.\n다른 프로젝트의 profiles까지 폭발 반경에 들어온다."];
+  anon -> n1 [style=invis];
+
+  n2 [shape=note, fillcolor="#FAEFD8", color="#E0B458", fontsize=10,
+      label="이중 방어 — SSO가 풀리는 날을 가정한다.\n모든 화면에 「투자 권고가 아닙니다 · 참고용」 상시 표기 + noindex.\n수신자·열람자는 본인 1명 (유사투자자문업 경계, R1)."];
+  sso -> n2 [style=invis];
+}

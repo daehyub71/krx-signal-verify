@@ -1,0 +1,105 @@
+digraph modules {
+  graph [fontname="Apple SD Gothic Neo", fontsize=13, rankdir=TB, nodesep=0.35, ranksep=0.55, pad=0.4, bgcolor="white", compound=true, newrank=true,
+         label="krx-signal-verify — 3층 분리와 모듈 의존 방향 v0.1 (PLAN §3 · SPEC N4)\l화살표는 「이 모듈이 저 모듈을 import·호출한다」는 뜻이다. 한 방향으로만 흐른다.\l", labelloc=t, labeljust=l];
+  node  [fontname="Apple SD Gothic Neo", fontsize=12, shape=box, style="rounded,filled", color="#3D465F", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Apple SD Gothic Neo", fontsize=10, color="#3D465F", arrowsize=0.8];
+
+  subgraph cluster_graph {
+    label=<<b>그래프 층</b> — LangGraph를 아는 유일한 층 · 노드 ≤ 20줄 (N6)>; style="rounded,filled"; fillcolor="#F3F0FA"; color="#9C8AD1";
+    graph_ [label=<graph.py<br/><font point-size="10">배선 · 조건부 엣지 · recursion_limit</font>>, fillcolor="#FFFFFF"];
+    nodes  [label=<nodes.py<br/><font point-size="10">상태 입출력만 · 도메인 함수를 부른다</font>>, fillcolor="#FFFFFF"];
+    state  [label=<state.py<br/><font point-size="10">VerifyState · reducer(operator.add)</font>>, fillcolor="#FFFFFF"];
+    graph_ -> nodes; graph_ -> state [style=dashed];
+  }
+
+  subgraph cluster_io {
+    label=<<b>I/O 층</b> — 부수효과를 아는 유일한 곳 · 테스트는 전부 mock · <b>예외를 밖으로 내지 않는다</b>>; style="rounded,filled"; fillcolor="#FFFBF2"; color="#E0B458";
+    main   [label=<main.py<br/><font point-size="10">CLI — --date · --ticker · --backfill-verdicts · --dry-run</font>>, fillcolor="#FFF4E0"];
+    store  [label=<<b>store.py</b><br/><font point-size="10">ksa_*·ksc_* SELECT · ksv_* upsert(청크)</font>>, fillcolor="#FFF4E0"];
+    enrich [label=<<b>enrich.py</b><br/><font point-size="10">종목 하나를 채운다 — 공시·본문·뉴스·재무<br/>MCP 실패 시 REST 폴백</font>>, fillcolor="#FFF4E0"];
+    mcpc   [label=<<b>mcpc.py</b><br/><font point-size="10">MCP SDK stdio 세션 1회 · 락 · 버전 고정</font>>, fillcolor="#F3F0FA", color="#9C8AD1"];
+    dmcp   [label=<dart_mcp.py<br/><font point-size="10">search_disclosures · 본문 · anomaly · insider</font>>, fillcolor="#FFF4E0"];
+    nmcp   [label=<news_mcp.py<br/><font point-size="10">search_news → NewsItem</font>>, fillcolor="#FFF4E0"];
+    dart   [label=<dart.py  <font point-size="10">(폴백)</font><br/><font point-size="10">urllib · corpCode.xml · list.json · 키 마스킹</font>>, fillcolor="#FFF4E0", style="rounded,filled,dashed"];
+    dfin   [label=<<b>dart_fin.py</b>  <font point-size="10">신규</font><br/><font point-size="10">fnlttMultiAcnt.json — <b>corp_code 15개/회</b> (실측)<br/>MCP에 다중회사 도구가 없어 REST 직접</font>>, fillcolor="#FFF4E0"];
+    llm    [label=<llm.py<br/><font point-size="10">anthropic SDK · 스트리밍 · refusal 먼저 확인</font>>, fillcolor="#FFF4E0"];
+    notify [label=<notify.py<br/><font point-size="10">smtplib · STARTTLS</font>>, fillcolor="#FFF4E0"];
+    config [label=<config.py<br/><font point-size="10">.env · Secrets</font>>, fillcolor="#FFF4E0"];
+  }
+
+  subgraph cluster_pure {
+    label=<<b>도메인 층</b> — 순수 함수 · DB·HTTP·LLM·LangGraph를 모른다 · <b>TDD 대상</b><br/><font point-size="10">굵은 테두리는 선행 krx-signal-briefing에서 <b>테스트와 함께 이식</b>한다 (V11)</font>>; style="rounded,filled"; fillcolor="#F0F9F1"; color="#5FA86B";
+    models  [label=<<b>models.py</b><br/><font point-size="10">Briefing · Verdict · Outcome · Financial<br/>아무것도 import하지 않는다</font>>, fillcolor="#FFFFFF", penwidth=2.2];
+    corp    [label=<corp.py<br/><font point-size="10">CORPCODE.xml → {ticker: corp_code}</font>>, fillcolor="#EAF7EC", penwidth=2.2];
+    flags   [label=<flags.py<br/><font point-size="10">정규화 · <b>규칙표 20개</b> · classify · 리츠 예외</font>>, fillcolor="#EAF7EC", penwidth=2.2];
+    routine [label=<routine.py<br/><font point-size="10">정형 공시를 접는다 — 소음의 65%</font>>, fillcolor="#EAF7EC", penwidth=2.2];
+    verdict [label=<<b>verdict.py</b><br/><font point-size="10">정합/불일치/무관 + 점수 + blind_spots<br/><b>LLM이 바꾸지 못한다</b> · rules_version</font>>, fillcolor="#EAF7EC", penwidth=2.2];
+    render  [label=<render.py<br/><font point-size="10">메일 본문 · <b>금지어</b> · 예산 접기</font>>, fillcolor="#EAF7EC", penwidth=2.2];
+    analysis [label=<analysis.py<br/><font point-size="10">LLM 입력 구성 · 스키마 · validate<br/>세라고 시키지 않고 세어서 준다</font>>, fillcolor="#EAF7EC", penwidth=2.2];
+
+    fin     [label=<<b>financial.py</b>  <font point-size="10">신규</font><br/><font point-size="10">재무 응답 → 지표 (F30)<br/><b>금융사는 계정이 다르다</b> — 못 찾으면 비운다 (F31)</font>>, fillcolor="#EAF7EC"];
+    shortg  [label=<<b>shorting.py</b>  <font point-size="10">신규</font><br/><font point-size="10">공매도 행 → 비중 20일 추이 (F32)</font>>, fillcolor="#EAF7EC"];
+    outcome [label=<<b>outcome.py</b>  <font point-size="10">신규</font><br/><font point-size="10">판정일 → N거래일 뒤 <b>지수 대비 초과수익</b> (F22·F23)</font>>, fillcolor="#EAF7EC"];
+    discr   [label=<<b>discriminate.py</b>  <font point-size="10">신규</font><br/><font point-size="10">군 간 분포 비교 — 중앙값·사분위·겹침·표본 (F24)<br/><b>적중률 %를 만들지 않는다</b></font>>, fillcolor="#EAF7EC"];
+  }
+
+  subgraph cluster_web {
+    label=<<b>웹 층</b> — 별도 배포 (Next.js) · <b>서버 사이드에서만 DB를 읽는다</b> (V9)>; style="rounded,filled"; fillcolor="#EEF3FA"; color="#7C9CC4";
+    wpage [label=<app/**/page.tsx<br/><font point-size="10">서버 컴포넌트 — 오늘·종목·이력·분별력</font>>, fillcolor="#FFFFFF"];
+    wdb   [label=<<b>lib/db.ts</b><br/><font point-size="10">전용 읽기 롤 — <b>ksv_* SELECT만</b><br/>브라우저에 키가 나가지 않는다</font>>, fillcolor="#FFFFFF", penwidth=1.8];
+    wapi  [label=<app/api/verify/route.ts<br/><font point-size="10">온디맨드 — ksv_requests insert + dispatch (V8)</font>>, fillcolor="#FFFFFF"];
+  }
+
+  subgraph cluster_ext {
+    label=<<b>외부</b>>; style="rounded,filled"; fillcolor="#FAFBFD"; color="#C5CAD6";
+    e_db  [label="Supabase\n(psycopg · supabase-py)", fillcolor="#EEF0F5"];
+    e_kdart [label="korean-dart-mcp\n(Node · npx)", fillcolor="#F3F0FA", color="#9C8AD1"];
+    e_knav  [label="naver-search-mcp\n(Node · npx)", fillcolor="#F3F0FA", color="#9C8AD1"];
+    e_dart  [label="OpenDART", fillcolor="#EEF0F5"];
+    e_naver [label="네이버 검색 API", fillcolor="#EEF0F5"];
+    e_ant   [label="Anthropic API", fillcolor="#EEF0F5"];
+    e_smtp  [label="Gmail SMTP", fillcolor="#EEF0F5"];
+    e_gh    [label="GitHub dispatch", fillcolor="#EEF0F5"];
+  }
+
+  // 그래프 층 → I/O
+  main -> graph_;
+  nodes -> store; nodes -> enrich; nodes -> llm; nodes -> notify;
+  main -> config [style=dashed];
+
+  // 그래프 층 → 도메인 (초록)
+  nodes -> verdict [color="#2E7D32"]; nodes -> render [color="#2E7D32"];
+  nodes -> outcome [color="#2E7D32"]; nodes -> discr [color="#2E7D32"];
+  nodes -> shortg  [color="#2E7D32"];
+
+  // I/O 내부
+  enrich -> dmcp; enrich -> nmcp; enrich -> dfin;
+  enrich -> dart [style=dashed, label=" 폴백", fontsize=9];
+  dmcp -> mcpc; nmcp -> mcpc;
+
+  // I/O → 도메인
+  enrich -> flags [color="#2E7D32"]; enrich -> routine [color="#2E7D32"]; enrich -> fin [color="#2E7D32"];
+  dart -> corp [color="#2E7D32"]; llm -> analysis [color="#2E7D32"];
+
+  // 도메인 내부
+  analysis -> verdict [color="#2E7D32"]; render -> verdict [color="#2E7D32"];
+  discr -> outcome [color="#2E7D32"];
+
+  // 도메인 → models
+  corp -> models [style=dashed, color="#9AA3B8"]; flags -> models [style=dashed, color="#9AA3B8"];
+  routine -> models [style=dashed, color="#9AA3B8"]; verdict -> models [style=dashed, color="#9AA3B8"];
+  render -> models [style=dashed, color="#9AA3B8"]; analysis -> models [style=dashed, color="#9AA3B8"];
+  fin -> models [style=dashed, color="#9AA3B8"]; shortg -> models [style=dashed, color="#9AA3B8"];
+  outcome -> models [style=dashed, color="#9AA3B8"]; discr -> models [style=dashed, color="#9AA3B8"];
+
+  // 외부
+  store -> e_db; mcpc -> e_kdart; mcpc -> e_knav;
+  dart -> e_dart [style=dashed]; dfin -> e_dart; llm -> e_ant; notify -> e_smtp;
+  e_kdart -> e_dart [style=dotted]; e_knav -> e_naver [style=dotted];
+
+  // 웹
+  wpage -> wdb; wdb -> e_db [color="#1F63A8"]; wapi -> e_gh [color="#6C4FC4"]; wapi -> wdb;
+
+  note [shape=note, fillcolor="#FFFFFF", fontsize=10, label="도메인 층 → I/O 층 import는 리뷰에서 막는다.\nLangGraph를 걷어내도 도메인 코드는 그대로 살아 있어야 한다.\n웹은 파이썬을 부르지 않는다 — 온디맨드는 DB에 요청을 남기고 dispatch로 배치를 깨운다."];
+  models -> note [style=invis];
+}

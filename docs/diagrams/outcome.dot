@@ -1,0 +1,56 @@
+digraph outcome {
+  graph [fontname="Apple SD Gothic Neo", fontsize=13, rankdir=TB, nodesep=0.4, ranksep=0.55, pad=0.4, bgcolor="white", compound=true,
+         label="krx-signal-verify — 적중 추적은 어떻게 도는가 v0.1 (PLAN §5 · SPEC F20~F26 · V4)\l판정을 되돌아보는 배치이지 예측하는 배치가 아니다. 개별 종목의 맞고 틀림을 매기지 않는다.\l", labelloc=t, labeljust=l];
+  node  [fontname="Apple SD Gothic Neo", fontsize=12, shape=box, style="rounded,filled", fillcolor="#F4F6FA", color="#3D465F", penwidth=1.2, margin="0.18,0.1"];
+  edge  [fontname="Apple SD Gothic Neo", fontsize=10, color="#3D465F", arrowsize=0.8];
+
+  subgraph cluster_t0 {
+    label=<<b>판정일 T</b>  — 그날 배치가 하는 일>; style="rounded,filled"; fillcolor="#FFFBF2"; color="#E0B458";
+    j [label=<<b>verdict.judge()</b> — 순수 함수<br/><font point-size="10">정합 / 불일치 / 무관 + 0~100점</font>>, fillcolor="#EAF7EC"];
+    save [label=<<b>ksv_verdicts</b>에 저장 (F20)<br/><font point-size="10">stand · score · <b>parts</b>(구성 요소와 가중치)<br/>blind_spots · <b>rules_version</b></font>>, fillcolor="#FFF4E0"];
+    j -> save;
+  }
+
+  subgraph cluster_fill {
+    label=<<b>이후 매일</b>  — fill_outcomes 노드 (F22·F23)>; style="rounded,filled"; fillcolor="#F5F9F5"; color="#5FA86B";
+    t5  [label=<T+5 거래일<br/><font point-size="10">도래하면 채운다</font>>, fillcolor="#EAF7EC"];
+    t20 [label=<T+20 거래일>, fillcolor="#EAF7EC"];
+    t60 [label=<T+60 거래일>, fillcolor="#EAF7EC"];
+    calc [label=<<b>지수 대비 초과수익</b> (F23)<br/><font point-size="10">종목 등락률 − 소속 시장 지수 등락률<br/><b>시장이 통째로 오른 날을 판정의 공으로 돌리지 않는다</b></font>>, fillcolor="#EAF7EC"];
+    { rank=same; t5; t20; t60; }
+  }
+
+  out [label=<<b>ksv_outcomes</b><br/><font point-size="10">h5 · h20 · h60 + 각 구간 초과수익<br/>아직 도래하지 않은 구간은 <b>null</b></font>>, fillcolor="#FFF4E0"];
+
+  subgraph cluster_agg {
+    label=<<b>집계</b>  — aggregate 노드 (F24 · V4 「그룹 분별력」)>; style="rounded,filled"; fillcolor="#F0F4FA"; color="#7C9CC4";
+    g1 [label=<<b>정합</b>으로 판정한 종목군<br/><font point-size="10">초과수익 분포</font>>, fillcolor="#E4EDF8"];
+    g2 [label=<<b>불일치</b>로 판정한 종목군<br/><font point-size="10">초과수익 분포</font>>, fillcolor="#F9E7E5"];
+    cmp [label=<<b>두 분포가 다른가</b><br/><font point-size="10">중앙값 차이 · 사분위 · <b>분포 겹침</b> · 표본 수<br/><b>적중률 %를 만들지 않는다</b> (R2)</font>>, fillcolor="#FFFFFF", penwidth=1.8];
+    g1 -> cmp; g2 -> cmp;
+  }
+
+  disc [label=<<b>ksv_discrimination</b><br/><font point-size="10">구간별·rules_version별 분포 요약</font>>, fillcolor="#FFF4E0"];
+
+  screen [label=<<b>분별력 화면</b> (F54)<br/><font point-size="10">표본이 기준 미만이면 수치 대신<br/><b>「표본 부족 (n=…)」</b>을 정직하게 표시</font>>, fillcolor="#FFFFFF", color="#7C9CC4"];
+
+  human [label=<<b>가중치는 사람이 고친다</b> (F25 · V5)<br/><font point-size="10">SPEC F표 → 코드 순서 · <b>rules_version</b>을 올린다<br/>자동 재적합은 하지 않는다 — 과적합 + 설명 불가</font>>, fillcolor="#FBE9EC", color="#C9283E"];
+
+  save -> t5  [label="  5거래일 뒤", color="#5FA86B", fontcolor="#5FA86B"];
+  save -> t20 [label="  20거래일 뒤", color="#5FA86B", fontcolor="#5FA86B"];
+  save -> t60 [label="  60거래일 뒤", color="#5FA86B", fontcolor="#5FA86B"];
+  t5 -> calc; t20 -> calc; t60 -> calc;
+  calc -> out;
+  out -> g1; out -> g2;
+  cmp -> disc -> screen;
+  disc -> human [style=dashed, color="#C9283E"];
+  human -> j [style=dashed, color="#C9283E", label="  산식 변경 시\l  rules_version++", fontcolor="#C9283E", constraint=false];
+
+  cold [shape=note, fillcolor="#FAEFD8", color="#E0B458", fontsize=10,
+        label="콜드스타트 (F21) — 판정은 LLM 없이 코드만으로 나므로 소급이 싸다.\nksa_signals의 과거 신호를 60~120거래일분 소급 판정해 출발 표본을 만든다.\n근거 서술은 소급하지 않는다 — 비용이 크고 채점에 쓰이지 않는다.\n\n그래도 60거래일 지표는 60거래일이 지나야 처음 나온다 (R10)."];
+  save -> cold [style=invis];
+
+  bars [shape=note, fillcolor="#EEF0F5", color="#C5CAD6", fontsize=10,
+        label="사후 주가는 상위 ksc_bars에서 읽는다 — 새 API도 새 키도 없다.\n거래정지일은 O/H/L=0·종가 유지로 오므로 관측 구간에서 걸러야 한다."];
+  calc -> bars [style=invis];
+}

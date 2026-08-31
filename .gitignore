@@ -1,0 +1,11 @@
+.env
+.tokens.json
+venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+node_modules/
+.next/

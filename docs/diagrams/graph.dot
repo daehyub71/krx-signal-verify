@@ -1,0 +1,78 @@
+digraph verify {
+  graph [fontname="Apple SD Gothic Neo", fontsize=13, rankdir=TB, nodesep=0.45, ranksep=0.5, pad=0.4, bgcolor="white",
+         label="krx-signal-verify — LangGraph 그래프 v0.1 (PLAN §1-1 · SPEC F1~F43)", labelloc=t, labeljust=l];
+  node  [fontname="Apple SD Gothic Neo", fontsize=12, shape=box, style="rounded,filled", fillcolor="#F4F6FA", color="#3D465F", penwidth=1.2, margin="0.18,0.08"];
+  edge  [fontname="Apple SD Gothic Neo", fontsize=10, color="#3D465F", arrowsize=0.8];
+
+  START [shape=circle, label="", width=0.22, fillcolor="#121829", color="#121829"];
+  END   [shape=doublecircle, label="", width=0.22, fillcolor="#121829", color="#121829"];
+
+  // ── 진입 분기 (V8) ────────────────────────────────
+  route_mode [shape=diamond, style=filled, fillcolor="#FFFFFF", height=0.95,
+              label=<route_mode<br/><font point-size="10">배치 / 온디맨드</font>>];
+
+  // ── 적중 추적 (F22·F24) — 신호와 무관하게 먼저 돈다
+  fill_out [label=<<b>fill_outcomes</b>  <font point-size="10">(F22)</font><br/><font point-size="10">도래한 5·20·60거래일 뒤 종가를 ksc_bars에서 읽어 채운다<br/><b>게이트보다 먼저</b> — 오늘 신호가 없어도 어제 판정은 채점한다</font>>, fillcolor="#FFF4E0"];
+  aggregate [label=<<b>aggregate</b>  <font point-size="10">(F24)</font><br/><font point-size="10">정합 군 vs 불일치 군 초과수익 <b>분포</b> 비교<br/>중앙값·사분위·겹침·표본 수 → ksv_discrimination<br/><b>적중률 %를 만들지 않는다</b> (R2)</font>>, fillcolor="#EAF7EC"];
+
+  // ── 게이트 (F1, 계승) ─────────────────────────────
+  gate  [label=<<b>gate</b>  <font point-size="10">(F1)</font><br/><font point-size="10">ksa_runs 오늘 행 조회 — 이벤트가 아니라 DB를 믿는다</font>>, fillcolor="#FFF4E0"];
+  route_gate [shape=diamond, style=filled, fillcolor="#FFFFFF", height=0.9,
+              label=<route_gate<br/><font point-size="10">조건부 엣지</font>>];
+  wait  [label=<<b>wait</b><br/><font point-size="10">60초 대기 · attempts += 1</font>>, fillcolor="#FFF4E0"];
+
+  // ── 입력 ──────────────────────────────────────────
+  load_sig [label=<<b>load_signals</b>  <font point-size="10">(F2)</font><br/><font point-size="10">suppressed=false 전부 + 기존 ksv_* (멱등)</font>>, fillcolor="#FFF4E0"];
+  load_req [label=<<b>load_request</b>  <font point-size="10">(F41)</font><br/><font point-size="10">ksv_requests에서 대기 요청 1건<br/>신호가 없으므로 차트 조건 줄이 빈다</font>>, fillcolor="#FFF4E0"];
+  load_corp [label=<<b>load_corps</b>  <font point-size="10">(F3)</font><br/><font point-size="10">corpCode.xml 1회 → {ticker: corp_code}</font>>, fillcolor="#FFF4E0"];
+  load_mkt  [label=<<b>load_market</b>  <font point-size="10">(F32·계승 F17)</font><br/><font point-size="10">SQL 1회 — 시총·거래대금 + 기관/외국인 30일 + <b>공매도 20일</b><br/>상위가 채운 ksc_* 를 읽기만 한다 · 실패해도 raise 안 함</font>>, fillcolor="#FFF4E0"];
+
+  // ── fan-out ───────────────────────────────────────
+  fetch [label=<<b>fetch_one × N</b>  <font point-size="10">(종목당 Send · 20줄 · raise 안 함)</font><br/><font point-size="10">① 공시  korean-dart-mcp 30일 → 실패 시 REST 폴백<br/>② 판정  flags.classify — 규칙표 20개 · 정형 공시는 접는다(F16)<br/>③ 본문  걸린 공시만 — 오버행·자금용도·리픽싱 (F15)<br/>④ 뉴스  전 종목 · 종목명 + 관련도순 + 제목 필터<br/>⑤ <b>재무</b>  fnlttMultiAcnt — <b>15종목씩 묶어</b> 부른다 (F30)</font>>, fillcolor="#FFF4E0", peripheries=2];
+  join [shape=point, width=0.12, fillcolor="#3D465F", color="#3D465F"];
+
+  // ── 판정 + LLM ────────────────────────────────────
+  judge [label=<<b>judge</b>  <font point-size="10">(F10·F20)</font><br/><font point-size="10"><b>verdict.judge() — 순수 함수</b>가 정합/불일치/무관 + 점수를 낸다<br/><b>판정을 저장한다</b> — parts·blind_spots·rules_version (F20)<br/>선행은 렌더 때 계산하고 버려서 이력이 없었다</font>>, fillcolor="#EAF7EC"];
+  explain [label=<<b>explain</b>  <font point-size="10">(F11)</font><br/><font point-size="10">Claude Opus 5 1회 일괄이 <b>판정을 설명</b>한다 · 종목당 2,000자<br/>금지어·티커·건수를 코드가 대조해 걸린 항목만 버린다<br/><b>LLM이 죽어도 판정·점수는 나간다</b></font>>, fillcolor="#E8F0FB"];
+
+  // ── 출력 ──────────────────────────────────────────
+  render [label=<<b>render</b>  <font point-size="10">(F50)</font><br/><font point-size="10">순수 함수 — 간략 메일 + 대시보드 링크<br/>102,400 bytes 예산 · 판정·점수·한계 문구는 접지 않는다</font>>, fillcolor="#EAF7EC"];
+  persist [label=<<b>persist</b>  <font point-size="10">(F20·F43)</font><br/><font point-size="10">ksv_verdicts · ksv_evidence — <b>청크로 나눠</b> upsert<br/>44행을 한 문장으로 보냈다가 하루치가 사라진 적이 있다</font>>, fillcolor="#FFF4E0"];
+  send [label=<<b>send_email</b><br/><font point-size="10">Gmail SMTP · 예외 불투과 → SendResult<br/>온디맨드는 메일을 보내지 않는다</font>>, fillcolor="#FFF4E0"];
+  record [label=<<b>record_run</b><br/><font point-size="10">ksv_runs · 실패해도 먼저 기록</font>>, fillcolor="#FFF4E0"];
+  final [label=<<b>finalize</b><br/><font point-size="10">gate_timeout · dart_failed · send_failed면<br/><b>여기서만 raise</b> (N6)</font>>, fillcolor="#FBE9EC"];
+
+  START -> route_mode;
+  route_mode -> fill_out [label="  배치", color="#1F63A8", fontcolor="#1F63A8"];
+  route_mode -> load_req [label="  온디맨드 (V8)", color="#6C4FC4", fontcolor="#6C4FC4"];
+
+  fill_out -> aggregate -> gate;
+  gate -> route_gate [arrowhead=none];
+  route_gate -> wait     [label="  missing (attempts < 10)", color="#B8860B", fontcolor="#B8860B"];
+  wait -> gate           [label="  사이클", color="#B8860B", fontcolor="#B8860B", constraint=false];
+  route_gate -> record   [label="  missing (10회) → gate_timeout · 기록이 먼저", color="#C9283E", fontcolor="#C9283E"];
+  route_gate -> render   [label="  stale → 신호 없이 [검증 없음]", color="#626D8A", fontcolor="#626D8A"];
+  route_gate -> load_sig [label="  ready", color="#1F63A8", fontcolor="#1F63A8"];
+
+  load_sig -> load_corp;
+  load_req -> load_corp [color="#6C4FC4"];
+  load_corp -> load_mkt;
+  load_mkt -> fetch  [label="  fan-out · Send() × N", style=dashed];
+  load_mkt -> judge  [label="  신호 0건", style=dotted, color="#626D8A", fontcolor="#626D8A"];
+  fetch -> join      [label="  reducer: verdicts += (operator.add)", style=dashed, arrowhead=none];
+  join -> judge;
+  judge -> explain -> render -> persist -> send -> record -> final -> END;
+
+  note [shape=note, fillcolor="#F3F0FA", color="#9C8AD1", fontsize=10,
+        label="MCP 세션은 그래프 밖(main)에서 배치당 1회 열고 닫는다 — mcpc.py\nfan-out N개가 세션 하나를 공유(락). 그래프는 MCP를 모른다.\n재무는 MCP가 아니라 OpenDART REST를 직접 부른다 — 다중회사 엔드포인트가 MCP에 없다."];
+  load_mkt -> note [style=invis];
+
+  subgraph cluster_legend {
+    label="범례"; fontsize=11; style="rounded"; color="#C5CAD6";
+    l_io   [label="I/O 노드 (DB · HTTP · SMTP)", fillcolor="#FFF4E0", fontsize=10];
+    l_llm  [label="LLM 노드 (있으면 좋은 층)", fillcolor="#E8F0FB", fontsize=10];
+    l_pure [label="순수 함수 노드", fillcolor="#EAF7EC", fontsize=10];
+    l_fail [label="실패 판정 (유일한 raise)", fillcolor="#FBE9EC", fontsize=10];
+    l_io -> l_llm -> l_pure -> l_fail [style=invis];
+  }
+}

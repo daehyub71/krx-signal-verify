@@ -1,0 +1,67 @@
+digraph arch {
+  graph [fontname="Apple SD Gothic Neo", fontsize=13, rankdir=TB, nodesep=0.35, ranksep=0.6, pad=0.4, bgcolor="white", compound=true,
+         label="krx-signal-verify — 시스템 개요 v0.1 (PLAN §1 · SPEC §3)", labelloc=t, labeljust=l];
+  node  [fontname="Apple SD Gothic Neo", fontsize=12, shape=box, style="rounded,filled", fillcolor="#F4F6FA", color="#3D465F", penwidth=1.2, margin="0.18,0.1"];
+  edge  [fontname="Apple SD Gothic Neo", fontsize=10, color="#3D465F", arrowsize=0.8];
+
+  subgraph cluster_up {
+    label=<<b>상위 프로젝트 2개</b>  (읽기만 한다 · 예외는 아래 두 곳)>; style="rounded,filled"; fillcolor="#FAFBFD"; color="#C5CAD6";
+    charts [label=<<b>krx-stock-charts</b><br/><font point-size="10">평일 18:00 KST · pykrx로 전 종목 수집<br/><b>+ 공매도 2회/일 추가</b> (V6b — 상위 수정 ①)</font>>, fillcolor="#FFF4E0", color="#E0B458"];
+    alert  [label=<<b>krx-signal-alerts</b><br/><font point-size="10">평일 08:20 KST · 전략 5개 스크리닝 · LLM 없음<br/><b>마지막에 dispatch 단계</b> (상위 수정 ②)</font>>, fillcolor="#FFF4E0", color="#E0B458"];
+    charts -> alert [label=" 시세를 읽는다", color="#626D8A"];
+  }
+
+  subgraph cluster_db {
+    label=<<b>Supabase</b>  (한 프로젝트 · 접두어로 소유 구분)>; style="rounded,filled"; fillcolor="#FAFBFD"; color="#C5CAD6";
+    ksc [label=<<b>ksc_bars · ksc_tickers</b><br/><b>ksc_investor_flows · ksc_shorting</b><br/><font point-size="10">charts 소유 · <b>SELECT만</b><br/>적중 추적의 사후 주가도 여기서 온다</font>>, fillcolor="#EEF0F5"];
+    ksa [label=<<b>ksa_signals · ksa_runs</b><br/><font point-size="10">alerts 소유 · <b>SELECT만</b></font>>, fillcolor="#EEF0F5"];
+    ksv [label=<<b>ksv_verdicts · ksv_evidence</b><br/><b>ksv_outcomes · ksv_discrimination</b><br/><b>ksv_runs · ksv_requests</b><br/><font point-size="10">이 프로젝트 소유 · <b>RLS 켜고 정책 없음</b><br/>쓰기 service_role · 읽기는 전용 롤 (V9)</font>>, fillcolor="#EAF7EC"];
+    { rank=same; ksc; ksa; ksv; }
+  }
+
+  subgraph cluster_me {
+    label=<<b>krx-signal-verify</b>  (이 프로젝트)<br/><font point-size="10">verify.yml · LangGraph · Python 3.11 + Node 20.19</font>>; style="rounded,filled"; fillcolor="#FFFBF2"; color="#E0B458";
+    track [label=<① <b>적중 추적</b> (F22·F24)<br/><font point-size="10">도래한 5·20·60거래일 뒤 종가 → <b>지수 대비 초과수익</b><br/>정합 군 vs 불일치 군 <b>분포</b> 비교 · 적중률 %는 만들지 않는다<br/><b>게이트보다 먼저 돈다</b> — 오늘 신호가 없어도 어제는 채점한다</font>>, fillcolor="#EAF7EC"];
+    gate  [label=<② 게이트 (F1)<br/><font point-size="10">ksa_runs 오늘 행? 없으면 1분×10회</font>>, fillcolor="#FFF4E0"];
+    ev    [label=<③ <b>증거 다섯 갈래</b><br/><font point-size="10">공시 본문 · 뉴스 · 수급 30일 · <b>재무</b> · <b>공매도</b><br/>재무는 fnlttMultiAcnt로 <b>15종목씩</b> 묶어 부른다</font>>, fillcolor="#FFF4E0"];
+    jd    [label=<④ 판정 + 서술<br/><font point-size="10"><b>판정·점수는 코드가</b> 낸다 — verdict.judge() 순수 함수<br/>Claude Opus 5가 그것을 <b>설명</b>한다 · 종목당 2,000자<br/><b>판정을 저장한다</b> — 선행은 버려서 이력이 없었다</font>>, fillcolor="#E8F0FB"];
+    mail  [label=<⑤ 메일 (F50)<br/><font point-size="10">간략하게 — 판정·점수·근거 발췌 + <b>대시보드 링크</b></font>>, fillcolor="#FFFFFF"];
+    track -> gate -> ev -> jd -> mail;
+  }
+
+  subgraph cluster_web {
+    label=<<b>웹 대시보드</b>  (Next.js 16 · Vercel · <b>SSO 보호 유지</b> — 본인만, V10)>; style="rounded,filled"; fillcolor="#EEF3FA"; color="#7C9CC4";
+    ui [label=<오늘 · 종목 · 이력 · <b>분별력</b> 4화면<br/><font point-size="10">모든 화면에 「투자 권고가 아닙니다」 + noindex</font>>, fillcolor="#FFFFFF"];
+    api [label=<<b>온디맨드 요청</b> (V8)<br/><font point-size="10">임의 종목 입력 → ksv_requests + dispatch → <b>약 1분</b></font>>, fillcolor="#FFFFFF"];
+    ui -> api [style=invis];
+  }
+
+  subgraph cluster_ext {
+    label=<<b>외부 API</b>  (새 키는 없다 — 재무는 기존 DART 키, 공매도는 상위의 기존 KRX 자격증명)>; style="rounded,filled"; fillcolor="#FAFBFD"; color="#C5CAD6";
+    mcp [label=<<b>MCP 2종</b> (npx stdio · 버전 고정)<br/><font point-size="10">korean-dart-mcp · naver-search-mcp<br/><b>데이터 소스일 뿐, 판단 주체가 아니다</b></font>>, fillcolor="#F3F0FA", color="#9C8AD1"];
+    dart [label=<OpenDART<br/><font point-size="10">공시 · 본문 · <b>fnlttMultiAcnt</b>(재무)</font>>, fillcolor="#EEF0F5"];
+    ant  [label=<Anthropic API<br/><font point-size="10">claude-opus-5</font>>, fillcolor="#EEF0F5"];
+    { rank=same; mcp; dart; ant; }
+  }
+
+  charts -> ksc [label=" 수집", color="#626D8A"];
+  alert  -> ksa [label=" 신호 저장", color="#626D8A"];
+  alert  -> gate [label="  dispatch — 20초 안에 시작 (실증)", color="#C9283E", fontcolor="#C9283E", penwidth=1.6];
+
+  ksa -> gate  [label=" SELECT", color="#1F63A8", fontcolor="#1F63A8"];
+  ksc -> track [label=" SELECT (사후 주가·지수)", color="#1F63A8", fontcolor="#1F63A8"];
+  ksc -> ev    [label=" SELECT (수급·공매도·시총)", color="#1F63A8", fontcolor="#1F63A8"];
+
+  jd -> ksv [label=" 판정·증거 저장 (청크)", color="#2E7D32", fontcolor="#2E7D32"];
+  track -> ksv [label=" 채점 결과", color="#2E7D32", fontcolor="#2E7D32"];
+
+  ev -> mcp [dir=both, label=" MCP stdio", color="#6C4FC4", fontcolor="#6C4FC4"];
+  ev -> dart [dir=both, label=" REST — 재무 · MCP 실패 시 폴백", style=dashed, color="#626D8A", fontcolor="#626D8A"];
+  mcp -> dart [dir=both, style=dotted];
+  jd -> ant [dir=both, style=dashed];
+
+  ksv -> ui  [label=" 전용 읽기 롤 · 서버 사이드만 (V9)", color="#1F63A8", fontcolor="#1F63A8", penwidth=1.6];
+  mail -> ui [label=" 링크", style=dotted, color="#626D8A"];
+  api -> ksv [label=" 요청 적재", color="#2E7D32", fontcolor="#2E7D32"];
+  api -> gate [label="  dispatch (온디맨드)", color="#6C4FC4", fontcolor="#6C4FC4", style=dashed];
+}
