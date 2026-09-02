@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any, Literal
@@ -145,6 +146,95 @@ class Insider:
     def sell_cluster(self) -> bool:
         """매도 군집인가. **매수 군집은 플래그가 아니다** — 참고 표시만."""
         return "sell_cluster" in self.signal
+
+
+@dataclass(frozen=True, slots=True)
+class EventBody:
+    """플래그된 공시의 **본문**. `report_nm` 한 줄로는 무슨 일인지 알 수 없다.
+
+    **`overhang_pct`가 이 모델의 핵심이다.** 같은 「전환사채 발행」이라도 잠재 물량이
+    5.10%인지 18.63%인지는 전혀 다른 사실이다 (선행 2026-08-26 실측: 씨피시스템 vs 엔투텍).
+    값이 없으면 `None` — 사채가 아닌 사건에는 전환가·오버행이 없다.
+    """
+
+    rcept_no: str
+    event_type: str = ""
+    amount: int | None = None
+    kind: str = ""
+    method: str = ""  # 사모 / 공모
+    conv_price: int | None = None
+    overhang_pct: float | None = None  # 발행주식총수 대비 잠재 물량(%)
+    outstanding: int | None = None
+    refix_floor: int | None = None  # 전환가액 하향조정 하한(원)
+
+
+@dataclass(frozen=True, slots=True)
+class Anomaly:
+    """공시 이상 점수 — **보조 신호다. 등급을 바꾸지 않는다.**"""
+
+    score: int  # 0~100
+    verdict: str  # clean / watch / warning / red_flag
+    summary: str = ""
+    flags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class FlowDay:
+    """하루치 투자자별 순매수거래대금(원) — 상위 `ksc_investor_flows` 한 행."""
+
+    d: date
+    inst: int | None = None  # 기관합계
+    foreign: int | None = None  # 외국인 + 기타외국인 (상위는 따로 담는다)
+    indiv: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class InvestorFlows:
+    """종목 하나의 수급 30일. 날짜 **오름차순**.
+
+    합계는 **`None`을 0으로 세지 않는다** — 그 투자자 표에 종목이 없던 날과
+    순매수가 0원이던 날은 다르다.
+    """
+
+    days: tuple[FlowDay, ...] = ()
+
+    @staticmethod
+    def _sum(values: Iterable[int | None]) -> int | None:
+        got = [v for v in values if v is not None]
+        return sum(got) if got else None
+
+    @property
+    def inst_total(self) -> int | None:
+        """기간 누적 기관 순매수(원). 값이 하나도 없으면 `None`."""
+        return self._sum(x.inst for x in self.days)
+
+    @property
+    def foreign_total(self) -> int | None:
+        return self._sum(x.foreign for x in self.days)
+
+    def on(self, day: date) -> FlowDay | None:
+        """그날 행. 없으면 `None`."""
+        return next((x for x in self.days if x.d == day), None)
+
+
+@dataclass(frozen=True, slots=True)
+class VerdictInput:
+    """`judge()`가 보는 것 **전부**. 산식이 무엇에 기대는지 여기 한눈에 보인다.
+
+    `Evidence`를 그대로 받지 않는 이유: **산식을 증거 저장 형태와 떼어 놓기 위해서다.**
+    저장 스키마가 바뀌어도 산식은 그대로여야 하고, 반대도 마찬가지다.
+    """
+
+    level: str = "none"  # flags.classify의 등급: red / amber / none / error / unknown
+    flags: tuple[Flag, ...] = ()
+    disclosures: tuple[Disclosure, ...] = ()
+    bodies: tuple[EventBody, ...] = ()
+    news: tuple[Any, ...] = ()  # judge는 **있는지 없는지만** 본다
+    flows: InvestorFlows | None = None
+    anomaly: Anomaly | None = None
+    financial: object | None = None  # M2에서 채운다 (F30)
+    shorting: object | None = None  # M2에서 채운다 (F32)
+    window_days: int = 30
 
 
 @dataclass(frozen=True, slots=True)
