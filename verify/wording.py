@@ -11,6 +11,18 @@ LLM 프롬프트·LLM 출력 검증·메일·웹 네 곳이 같은 규칙을 봐
 그래서 검사 전에 허용 합성어를 지운다. 매매 판단(`매도 판단`·`매수 시점`)은 그대로 막힌다 —
 **여기 적힌 형태만** 예외다.
 
+## 규칙이 둘이다
+
+| | 막는 것 | 어디서 왔나 |
+|---|---|---|
+| **N1** | 매매 판단 (`매수`·`목표가`·`손절`…) | 선행에서 계승 |
+| **N2** | 적중 문구 (`적중`·`승률`·`수익률`…) | **이 프로젝트에서 신설** |
+
+N2는 이 프로젝트가 **판정을 저장하고 사후 주가를 붙이기 때문에** 생겼다.
+「불일치 적중률 68%」 한 줄이면 다음 판정을 **예측으로 읽는다** (SPEC R2 — 최대 리스크).
+문구로만 막지 않는다: `discriminate`의 반환 타입에 적중률 필드를 두지 않고,
+`ksv_discrimination` 스키마에도 그런 열을 두지 않는다. **세 겹이다.**
+
 ## 원문은 검사하지 않는다
 
 공시 제목·뉴스 제목은 남이 쓴 **원문**이라 금지어가 들어 있어도 그대로 싣는다.
@@ -58,3 +70,57 @@ def has_forbidden(text: str) -> str:
     for word in ALLOWED_COMPOUNDS:
         rest = rest.replace(word, " ")
     return next((w for w in FORBIDDEN if w in rest), "")
+
+
+# ── N2 적중 문구 (이 프로젝트에서 신설) ─────────────────────────
+#
+# **「불일치」는 "근거가 신호와 어긋난다"이지 "떨어진다"가 아니다.**
+# 개별 종목에 「맞았다/틀렸다」를 매기는 순간, 이 프로젝트는 하지 않기로 한 일(예측)을 한다.
+#
+# `예측`은 **금지하지 않는다** — 한계 문구가 「예측이 아니다」라고 말해야 하기 때문이다.
+# 막는 것은 성과를 주장하는 말이다.
+FORBIDDEN_OUTCOME: tuple[str, ...] = (
+    "적중",
+    "승률",
+    "수익률",
+    "정확도",
+    "맞혔",
+    "맞았",
+    "틀렸",
+    "빗나",
+)
+
+# 우리가 써야 하는 말. `초과수익`은 관측치의 이름이라 `수익률`에 걸리면 안 된다.
+ALLOWED_OUTCOME_COMPOUNDS: tuple[str, ...] = ("초과수익",)
+
+# 대신 쓰는 말 — 오류 메시지에 실어 고칠 방향을 알려 준다.
+OUTCOME_ALTERNATIVES = "초과수익 분포 · 분별력 · 표본 수"
+
+
+def has_forbidden_outcome(text: str) -> str:
+    """적중 문구가 있으면 **그 말을**, 없으면 빈 문자열 (N2).
+
+    Args:
+        text: 우리가 쓴 문장.
+
+    Returns:
+        걸린 말 하나. 고칠 방향은 `OUTCOME_ALTERNATIVES`에 있다.
+    """
+    rest = text
+    for word in ALLOWED_OUTCOME_COMPOUNDS:
+        rest = rest.replace(word, " ")
+    return next((w for w in FORBIDDEN_OUTCOME if w in rest), "")
+
+
+def first_violation(text: str) -> tuple[str, str]:
+    """두 규칙을 한 번에 본다.
+
+    Returns:
+        `("N1", 걸린말)` · `("N2", 걸린말)` · `("", "")`. **어느 규칙인지까지 돌려준다** —
+        고치는 방향이 다르기 때문이다(N1은 사실로, N2는 분포·표본 수로).
+    """
+    if (w := has_forbidden(text)):
+        return "N1", w
+    if (w := has_forbidden_outcome(text)):
+        return "N2", w
+    return "", ""
