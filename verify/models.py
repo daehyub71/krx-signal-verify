@@ -149,6 +149,20 @@ class Insider:
 
 
 @dataclass(frozen=True, slots=True)
+class NewsItem:
+    """네이버 뉴스 한 건. 검색어 `{종목명}` + 관련도순 + 제목 필터를 거친 것만 담는다.
+
+    **앞 글자가 한글이면 다른 회사다** — `아이텍`이 `위세아이텍` 안에서 잡혔다 (선행 실측).
+    """
+
+    title: str
+    link: str
+    published: date | None = None
+    summary: str = ""
+    source: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class EventBody:
     """플래그된 공시의 **본문**. `report_nm` 한 줄로는 무슨 일인지 알 수 없다.
 
@@ -160,8 +174,10 @@ class EventBody:
     rcept_no: str
     event_type: str = ""
     amount: int | None = None
+    use_of_funds: tuple[tuple[str, int], ...] = ()  # (용도, 금액) — 비어 있으면 미기재
     kind: str = ""
     method: str = ""  # 사모 / 공모
+    coupon_rate: float | None = None
     conv_price: int | None = None
     overhang_pct: float | None = None  # 발행주식총수 대비 잠재 물량(%)
     outstanding: int | None = None
@@ -211,6 +227,14 @@ class InvestorFlows:
     @property
     def foreign_total(self) -> int | None:
         return self._sum(x.foreign for x in self.days)
+
+    @property
+    def indiv_total(self) -> int | None:
+        return self._sum(x.indiv for x in self.days)
+
+    def recent(self, n: int) -> InvestorFlows:
+        """최근 n일만. 날짜 오름차순이므로 뒤에서 자른다."""
+        return InvestorFlows(days=self.days[-n:] if n > 0 else ())
 
     def on(self, day: date) -> FlowDay | None:
         """그날 행. 없으면 `None`."""
