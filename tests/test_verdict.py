@@ -247,7 +247,18 @@ def test_new_lanes_are_named_but_not_scored_yet() -> None:
 
 def test_the_limit_note_is_always_available() -> None:
     note = verdict.judge(brief()).limit_note
-    assert "근거를 재며" in note and "실적·밸류에이션" in note
+    assert "근거가 받쳐지는지를 재며" in note and "실적·밸류에이션" in note
+
+
+def test_the_limit_note_says_it_is_not_about_the_future_price() -> None:
+    """F10b — 「공시 이후의 주가」를 사각지대에서 뺐으니 **뒷문장을 세운다.**
+
+    목록이 짧아진 만큼 읽는 사람은 점수를 더 믿게 된다. 사각지대를 나열하는 것만으로는
+    「그럼 주가를 맞히는 점수인가」라는 오해를 막지 못한다 (R2).
+    """
+    note = verdict.judge(brief()).limit_note
+    assert "앞으로의 주가를 말하지 않는다" in note
+    assert "공시 이후의 주가" not in note
 
 
 # ── 조회 실패·코드 미확인 ────────────────────────────────────────

@@ -29,10 +29,9 @@ LLM(F19)은 이 결과를 **설명**할 뿐 바꾸지 못한다.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
 
-from verify.models import VerdictInput
+from verify.models import Verdict, VerdictInput, VerdictPart
 
 NEUTRAL = 50
 CORROBORATES_AT = 60  # 이상이면 정합
@@ -78,27 +77,9 @@ W_NO_RISK = 10  # 확인된 위험 유형이 없음
 W_NEWS_EXPLAINS = 3  # 위험 공시가 있는데 그것을 설명하는 뉴스가 있음
 
 
-@dataclass(frozen=True, slots=True)
-class Part:
-    """점수 한 조각 — 무엇 때문에 얼마가 오르내렸는지."""
-
-    label: str
-    delta: int
-
-
-@dataclass(frozen=True, slots=True)
-class Verdict:
-    """판정 결과 (F18). `stand`·`score`는 코드가 정하고 LLM이 바꾸지 못한다."""
-
-    stand: str  # 정합 / 불일치 / 무관
-    score: int  # 0~100. 50이 중립
-    parts: tuple[Part, ...] = ()
-    blind_spots: tuple[str, ...] = ()
-
-    @property
-    def limit_note(self) -> str:
-        """점수와 **항상 함께 나가는** 한 줄 (R20)."""
-        return "이 점수는 신호의 근거를 재며, " + " · ".join(self.blind_spots) + "을 보지 않는다"
+# `Verdict`·`Part`는 **여기서 정의하지 않는다.** 도메인 모델은 `models.py`가 소유한다 —
+# 두 곳에 두면 저장 계층이 어느 쪽을 쓰는지 모호해지고 조용히 갈라진다.
+Part = VerdictPart
 
 
 def _clamp(v: int) -> int:
