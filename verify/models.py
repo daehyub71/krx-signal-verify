@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 DART_VIEWER = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
 
@@ -96,6 +96,55 @@ class SignalRow:
         """진행 중인 주봉 기준 판정인가 (상위 F8 표기)."""
         meta = self.ev.get("meta")
         return bool(meta.get("in_progress", False)) if isinstance(meta, dict) else False
+
+
+# ── 공시 (M1 이식) ───────────────────────────────────────────────
+
+FlagLevel = Literal["red", "amber"]
+
+
+@dataclass(frozen=True, slots=True)
+class Disclosure:
+    """공시 하나. OpenDART `list.json` 한 항목."""
+
+    rcept_dt: date
+    report_nm: str
+    rcept_no: str
+    flr_nm: str = ""
+    corrected: bool = False  # `[정정]`·`[기재정정]` 접두가 있었는가
+
+    @property
+    def link(self) -> str:
+        """DART 원문 링크. **모든 공시 항목에 필수** (N3)."""
+        return dart_link(self.rcept_no)
+
+
+@dataclass(frozen=True, slots=True)
+class Flag:
+    """등급을 올린 공시 하나 — 「몇 점」이 아니라 **「어떤 공시 때문인지」**를 남긴다."""
+
+    rule: str
+    level: FlagLevel
+    rcept_no: str
+    report_nm: str
+
+
+@dataclass(frozen=True, slots=True)
+class Insider:
+    """임원·주요주주 매매 군집 (korean-dart-mcp `insider_signal`). 실물 연결은 M2."""
+
+    signal: str  # strong_sell_cluster / sell_cluster / buy_cluster / none …
+    buy_events: int = 0
+    sell_events: int = 0
+    unique_buyers: int = 0
+    unique_sellers: int = 0
+    net_change_shares: int = 0
+    summary: str = ""
+
+    @property
+    def sell_cluster(self) -> bool:
+        """매도 군집인가. **매수 군집은 플래그가 아니다** — 참고 표시만."""
+        return "sell_cluster" in self.signal
 
 
 @dataclass(frozen=True, slots=True)
