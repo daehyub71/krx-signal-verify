@@ -47,13 +47,12 @@ def test_load_env_strips_quotes_but_keeps_inner_equals(
     """DB URL에 '='가 들어간다. 첫 '='에서만 잘라야 한다."""
     for k in ("KSV_T_E", "KSV_T_F"):
         monkeypatch.delenv(k, raising=False)
+    dsn = "postgresql://USER:NOT_A_REAL_PASSWORD@HOST/db?sslmode=require"
     p = tmp_path / ".env"
-    p.write_text(
-        'KSV_T_E="quoted"\nKSV_T_F=postgresql://USER:NOT_A_REAL_PASSWORD@HOST/db?sslmode=require\n', encoding="utf-8"
-    )
+    p.write_text(f'KSV_T_E="quoted"\nKSV_T_F={dsn}\n', encoding="utf-8")
     config.load_env(p)
     assert os.environ["KSV_T_E"] == "quoted"
-    assert os.environ["KSV_T_F"] == "postgresql://USER:NOT_A_REAL_PASSWORD@HOST/db?sslmode=require"
+    assert os.environ["KSV_T_F"] == dsn
 
 
 def test_load_env_missing_file_is_silent(tmp_path: Path) -> None:
