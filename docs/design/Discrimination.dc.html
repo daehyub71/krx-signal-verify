@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+    a { color: #c9283e; text-decoration: none; } a:hover { color: #9c1e30; text-decoration: underline; }
+    .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .card { background: #ffffff; border: 1px solid #d3d8e4; border-radius: 8px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .sk { font-size: 11.5px; color: #626d8a; }
+    .sv { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: #eff1f5; color: #121829; display: flex; flex-direction: column;">
+
+  <div style="display: flex; align-items: center; gap: 8px; background: #e5e8ef; border-bottom: 1px solid #d3d8e4; padding: 8px 24px; font-size: 12.5px; color: #3d465f;">
+    <b style="font-weight: 600;">투자 권고가 아닙니다 · 참고용 테스트</b>
+    <span style="color: #8b94ac;">아래는 지난 판정이 두 군을 갈라놓았는지에 대한 관측이며, 앞으로의 판정에 대한 예측이 아닙니다</span>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border-bottom: 1px solid #d3d8e4; padding: 0 24px; height: 56px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <b style="font-size: 16px; font-weight: 600; letter-spacing: -.01em;">검증</b>
+      <span class="m" style="font-size: 11.5px; color: #8b94ac;">krx-signal-verify</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px;">
+      <span style="color: #626d8a;">오늘</span>
+      <span style="color: #626d8a;">이력</span>
+      <b style="font-weight: 600; border-bottom: 2px solid #c9283e; padding-bottom: 2px;">분별력</b>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 5px; padding: 18px 24px 14px; background: #fafbfd; border-bottom: 1px solid #d3d8e4;">
+    <b style="font-size: 17px; font-weight: 600; letter-spacing: -.015em;">정합으로 판정한 종목군과 불일치로 판정한 종목군은 서로 다르게 움직였는가</b>
+    <span style="font-size: 12.5px; color: #626d8a;">
+      개별 종목의 맞고 틀림은 세지 않는다. 두 군의 <b style="color: #121829; font-weight: 600;">기준선 대비 초과수익 분포</b>가 갈라지는지만 본다 —
+      <span class="m">rules v3</span> · 기준선 <span class="m">등가중 시장 프록시</span> · 표본은 <span class="m">배치</span>만 (온디맨드 제외)
+    </span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 18px 24px;">
+
+    <sc-for list="{{rows}}" as="h" hint-placeholder-count="2">
+      <div class="card">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <b style="font-size: 14px; font-weight: 600;">{{h.title}}</b>
+          <span style="font-size: 12px; color: #8b94ac;">{{h.note}}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 26px;">
+          <svg width="740" height="108" viewBox="0 0 740 108">
+            <sc-for list="{{h.ticks}}" as="t" hint-placeholder-count="7">
+              <line x1="{{t.x}}" y1="6" x2="{{t.x}}" y2="82" stroke="{{t.stroke}}" stroke-width="1"></line>
+              <text x="{{t.x}}" y="99" text-anchor="middle" font-size="10.5" fill="#8b94ac" font-family="ui-monospace, monospace">{{t.label}}</text>
+            </sc-for>
+            <sc-for list="{{h.boxes}}" as="b" hint-placeholder-count="2">
+              <line x1="{{b.lo}}" y1="{{b.mid}}" x2="{{b.hi}}" y2="{{b.mid}}" stroke="{{b.hue}}" stroke-width="1.2"></line>
+              <line x1="{{b.lo}}" y1="{{b.capT}}" x2="{{b.lo}}" y2="{{b.capB}}" stroke="{{b.hue}}" stroke-width="1.2"></line>
+              <line x1="{{b.hi}}" y1="{{b.capT}}" x2="{{b.hi}}" y2="{{b.capB}}" stroke="{{b.hue}}" stroke-width="1.2"></line>
+              <rect x="{{b.q1}}" y="{{b.y}}" width="{{b.w}}" height="24" rx="3" fill="{{b.wash}}" stroke="{{b.hue}}" stroke-width="1.2"></rect>
+              <line x1="{{b.med}}" y1="{{b.y}}" x2="{{b.med}}" y2="{{b.yb}}" stroke="{{b.hue}}" stroke-width="2.6"></line>
+              <text x="8" y="{{b.labelY}}" font-size="11.5" fill="{{b.hue}}" font-weight="600">{{b.label}}</text>
+            </sc-for>
+          </svg>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 22px; flex-grow: 1;">
+            <sc-for list="{{h.stats}}" as="s" hint-placeholder-count="4">
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="sk">{{s.k}}</span>
+                <b class="m sv" style="color: {{s.hue}};">{{s.v}}</b>
+              </span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+
+    <div class="card" style="background: #fafbfd;">
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <b style="font-size: 14px; font-weight: 600; color: #626d8a;">60거래일</b>
+        <span style="font-size: 12px; color: #8b94ac;">기준선 대비 초과수익</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 26px;">
+        <div style="width: 740px; height: 108px; border: 1px dashed #bfc6d6; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; background: #eff1f5;">
+          <b class="m" style="font-size: 15px; font-weight: 600; color: #626d8a;">표본 부족 (n=12)</b>
+          <span style="font-size: 12px; color: #8b94ac;">최소 표본 60건에 이르면 분포를 그린다</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+          <span style="font-size: 12.5px; color: #3d465f; line-height: 1.65;">
+            60거래일 구간은 판정일로부터 <b style="font-weight: 600;">약 3개월</b>이 지나야 처음 채워진다.
+            그때까지 수치를 만들어 내지 않는다.
+          </span>
+          <span style="font-size: 11.5px; color: #8b94ac;">채워진 판정 12 / 도래 대기 400</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px; margin: 0 24px 20px; padding: 14px 18px; background: #e5e8ef; border-radius: 8px;">
+    <b style="font-size: 12.5px; font-weight: 600;">이 화면이 말하지 않는 것</b>
+    <span style="font-size: 12px; color: #3d465f; line-height: 1.7;">
+      적중률 · 승률 · 수익률을 만들지 않는다. <b style="font-weight: 600;">불일치는 「근거가 신호와 어긋난다」이지 「떨어진다」가 아니다.</b>
+      두 군의 분포가 겹치는 정도가 크다는 것은, 지금 표본에서 이 판정이 두 군을 뚜렷이 갈라놓지 못했다는 뜻이다.
+      가중치는 이 관측만으로 바꾸지 않는다 — 바꾸려면 SPEC을 먼저 고치고 <span class="m">rules_version</span>을 올린다.
+    </span>
+  </div>
+</div>
+
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const G = '#0f6e5c', GW = '#e6f2ef', R = '#c9283e', RW = '#fbeaec', N = '#3d465f';
+    const X = (v) => 360 + v * 24;
+    const ticks = [-15, -10, -5, 0, 5, 10, 15].map((v) => ({
+      x: X(v), label: v === 0 ? '0' : (v > 0 ? '+' + v : String(v)) + '%',
+      stroke: v === 0 ? '#bfc6d6' : '#e5e8ef',
+    }));
+    const box = (label, hue, wash, lo, q1, med, q3, hi, top) => ({
+      label, hue, wash,
+      lo: X(lo), hi: X(hi), q1: X(q1), med: X(med), w: X(q3) - X(q1),
+      y: top, yb: top + 24, mid: top + 12, capT: top + 5, capB: top + 19, labelY: top + 16,
+    });
+    return {
+      rows: [
+        {
+          title: '5거래일', note: '기준선 대비 초과수익',
+          ticks,
+          boxes: [
+            box('정합', G, GW, -4.1, -0.6, 1.4, 3.2, 7.8, 14),
+            box('불일치', R, RW, -7.2, -3.4, -0.9, 1.1, 5.0, 50),
+          ],
+          stats: [
+            { k: '중앙값 차이', v: '+2.3%p', hue: N },
+            { k: '분포 겹침', v: '68%', hue: N },
+            { k: '표본 · 정합', v: 'n=118', hue: G },
+            { k: '표본 · 불일치', v: 'n=63', hue: R },
+          ],
+        },
+        {
+          title: '20거래일', note: '기준선 대비 초과수익',
+          ticks,
+          boxes: [
+            box('정합', G, GW, -8.4, -1.2, 2.6, 6.0, 14.2, 14),
+            box('불일치', R, RW, -12.6, -6.3, -2.1, 1.8, 8.1, 50),
+          ],
+          stats: [
+            { k: '중앙값 차이', v: '+4.7%p', hue: N },
+            { k: '분포 겹침', v: '61%', hue: N },
+            { k: '표본 · 정합', v: 'n=94', hue: G },
+            { k: '표본 · 불일치', v: 'n=51', hue: R },
+          ],
+        },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

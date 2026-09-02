@@ -1,0 +1,24 @@
+# krx-signal-verify — 런타임 의존성
+# 버전은 선행 krx-signal-briefing과 맞춘다. 올릴 때는 계약 테스트를 다시 돌린다 (SPEC N14).
+
+# 배치 오케스트레이션. 그래프 층만 이것을 안다 — 걷어내도 도메인이 살아 있어야 한다 (N4)
+langgraph>=1.2,<2
+
+# 근거 서술 (F11). 없어도 판정·점수는 나간다 — 있으면 좋은 층이다
+anthropic>=0.40
+
+# ksv_* 쓰기. service_role은 RLS를 우회한다 — 웹 번들에 절대 넣지 않는다
+supabase>=2.31,<3
+
+# 런타임 의존성이다(dev 아님). 상위 대량 조회는 REST의 1000행 절단을 피해 직접 SQL로 한다.
+# 선행에서 psycopg를 requirements-dev.txt에 두었다가 CI에서 ModuleNotFoundError가 났다 —
+# 로컬은 dev를 깔아 두어 안 보인다.
+psycopg[binary]>=3.2
+
+# macOS 파이썬은 CA 번들이 없다. SMTP STARTTLS에 명시적으로 쓴다.
+# 이 맥에는 TLS 인터셉션도 있어, 외부 HTTPS 호출은 이 번들이 없으면 CERTIFICATE_VERIFY_FAILED로 막힌다
+# (2026-09-01 KIS 호출에서 실측).
+certifi>=2024.0
+
+# M2에서 더한다 — MCP 파이썬 SDK (korean-dart-mcp · naver-search-mcp를 stdio로 부른다, N5)
+# mcp>=2.1,<3

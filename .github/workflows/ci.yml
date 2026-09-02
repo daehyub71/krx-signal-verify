@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 최소 권한 — 이 워크플로는 코드를 읽기만 한다 (SPEC N15)
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: 의존성
+        run: pip install -r requirements-dev.txt
+
+      - name: 1. 린트
+        run: ruff check .
+
+      - name: 2. 타입 (strict)
+        run: mypy
+
+      # 자격증명이 없어도 도는 테스트만 있다 — 외부 I/O는 전부 mock이고
+      # 스키마 검사는 schema.sql을 파일로 읽는다.
+      - name: 3. 테스트
+        run: pytest -q
+
+      # 설계도는 손그림이라 조용히 낡는다. 코드와 갈라지면 여기서 걸린다 (N16).
+      - name: 4. 설계도 대조
+        run: |
+          python -u scripts/export_graph.py
+          python -u scripts/check_diagram.py
+
+      # GRAPH.md를 갱신하지 않고 그래프만 고친 커밋을 잡는다.
+      - name: 5. GRAPH.md가 최신인가
+        run: |
+          if ! git diff --quiet -- docs/GRAPH.md; then
+            echo "::error::docs/GRAPH.md가 낡았다 — python scripts/export_graph.py 를 돌리고 커밋하라"
+            git --no-pager diff --stat -- docs/GRAPH.md
+            exit 1
+          fi

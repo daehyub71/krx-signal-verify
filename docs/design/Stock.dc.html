@@ -1,0 +1,217 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+    a { color: #c9283e; text-decoration: none; } a:hover { color: #9c1e30; text-decoration: underline; }
+    .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .lane { background: #ffffff; border: 1px solid #d3d8e4; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 11px; }
+    .lh { display: flex; align-items: baseline; gap: 9px; }
+    .lt { font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+    .ln { font-size: 11.5px; color: #8b94ac; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: #eff1f5; color: #121829; display: flex; flex-direction: column;">
+
+  <div style="display: flex; align-items: center; gap: 8px; background: #e5e8ef; border-bottom: 1px solid #d3d8e4; padding: 8px 24px; font-size: 12.5px; color: #3d465f;">
+    <b style="font-weight: 600;">투자 권고가 아닙니다 · 참고용 테스트</b>
+    <span style="color: #8b94ac;">아래는 신호에 대한 증거 정리이며, 이 종목의 향후 주가에 대한 전망이 아닙니다</span>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border-bottom: 1px solid #d3d8e4; padding: 0 24px; height: 56px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-size: 13px; color: #626d8a;">오늘</span>
+      <span style="font-size: 12px; color: #8b94ac;">›</span>
+      <b style="font-size: 15px; font-weight: 600;">한미반도체</b>
+      <span class="m" style="font-size: 12px; color: #8b94ac;">042700</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: #626d8a;">
+      <span class="m" style="background: #e5e8ef; padding: 3px 8px; border-radius: 4px; color: #3d465f;">rules v3</span>
+      <span class="m">2026-09-01 판정</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 24px; align-items: flex-start; padding: 20px 24px; background: #fafbfd; border-bottom: 1px solid #d3d8e4;">
+    <div style="display: flex; flex-direction: column; gap: 10px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 14px; font-weight: 700; padding: 5px 14px; border-radius: 5px; background: #fbeaec; color: #c9283e;">불일치</span>
+        <span style="font-size: 12.5px; color: #626d8a;">증거가 신호를 거스른다</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: block; width: 176px; height: 10px; border-radius: 5px; background: #e5e8ef; overflow: hidden;">
+          <span style="display: block; height: 10px; width: 60px; background: #c9283e;"></span>
+        </span>
+        <b class="m" style="font-size: 26px; font-weight: 600; letter-spacing: -.02em;">34</b>
+        <span class="m" style="font-size: 12px; color: #8b94ac;">/ 100</span>
+      </div>
+      <span style="font-size: 11.5px; color: #8b94ac;">50이 중립이다. 근거가 받치면 오르고 거스르면 내린다</span>
+    </div>
+
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 7px; border-left: 1px solid #d3d8e4; padding-left: 24px;">
+      <span style="font-size: 11.5px; color: #8b94ac; font-weight: 500;">점수 구성</span>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 22px;">
+        <sc-for list="{{parts}}" as="p" hint-placeholder-count="6">
+          <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12.5px; border-bottom: 1px dotted #d3d8e4; padding-bottom: 3px;">
+            <span style="color: #3d465f;">{{p.label}}</span>
+            <b class="m" style="font-weight: 600; color: {{p.hue}};">{{p.delta}}</b>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #e5e8ef; border-bottom: 1px solid #d3d8e4;">
+    <span style="font-size: 12px; color: #626d8a; font-weight: 500;">차트 신호</span>
+    <b style="font-size: 13px; font-weight: 600;">VCP 거래량 수축</b>
+    <div style="display: flex; gap: 14px;">
+      <sc-for list="{{conds}}" as="c" hint-placeholder-count="4">
+        <span style="display: flex; align-items: baseline; gap: 5px; font-size: 12px;">
+          <span style="color: #c9283e; font-size: 11px;">✓</span>
+          <span style="color: #3d465f;">{{c.label}}</span>
+          <span class="m" style="color: #626d8a;">{{c.actual}}</span>
+        </span>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 18px 24px;">
+
+    <div class="lane" style="grid-column: 1 / -1;">
+      <div class="lh"><span class="lt">1 · DART 공시</span><span class="ln">최근 30일 · 정기·정형 공시 <b class="m" style="color: #3d465f;">7</b>건은 접었다</span></div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; background: #fbeaec; border-radius: 6px;">
+          <span class="m" style="font-size: 12px; color: #c9283e; font-weight: 600;">08-22</span>
+          <b style="font-size: 13px; font-weight: 600;">전환사채권발행결정</b>
+          <span style="font-size: 12px; color: #3d465f;">본문 — 발행 후 유통물량 대비 <b class="m">18.63%</b> · 전환가액 조정 하한 <b class="m">70%</b></span>
+          <a href="#" style="margin-left: auto; font-size: 12px;">DART 원문 ↗</a>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; background: #fafbfd; border: 1px solid #d3d8e4; border-radius: 6px;">
+          <span class="m" style="font-size: 12px; color: #626d8a; font-weight: 600;">08-14</span>
+          <b style="font-size: 13px; font-weight: 600;">단일판매ㆍ공급계약체결</b>
+          <span style="font-size: 12px; color: #3d465f;">계약금액 <b class="m">1,240</b>억 · 최근 매출액 대비 <b class="m">8.1%</b></span>
+          <a href="#" style="margin-left: auto; font-size: 12px;">DART 원문 ↗</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lh"><span class="lt">2 · 네이버 뉴스</span><span class="ln">최근 7일 · 제목 필터 통과 3건</span></div>
+      <div style="display: flex; flex-direction: column; gap: 7px;">
+        <sc-for list="{{news}}" as="n" hint-placeholder-count="3">
+          <span style="display: flex; align-items: baseline; gap: 9px; font-size: 12.5px;">
+            <span class="m" style="color: #8b94ac; flex-shrink: 0;">{{n.d}}</span>
+            <span style="color: #121829;">{{n.t}}</span>
+            <span style="color: #8b94ac; margin-left: auto; flex-shrink: 0;">{{n.src}}</span>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lh"><span class="lt">3 · 기관 · 외국인 수급</span><span class="ln">30거래일 누적 순매수</span></div>
+      <div style="display: flex; align-items: center; gap: 22px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 11.5px; color: #626d8a;">외국인</span>
+          <b class="m" style="font-size: 17px; font-weight: 600; color: #1f63a8;">-1,482억</b>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 11.5px; color: #626d8a;">기관</span>
+          <b class="m" style="font-size: 17px; font-weight: 600; color: #1f63a8;">-306억</b>
+        </div>
+        <svg width="240" height="46" viewBox="0 0 240 46" style="margin-left: auto;">
+          <line x1="0" y1="23" x2="240" y2="23" stroke="#d3d8e4" stroke-width="1"></line>
+          <polyline points="0,20 20,17 40,22 60,26 80,24 100,29 120,31 140,28 160,34 180,37 200,35 220,40 240,42" fill="none" stroke="#1f63a8" stroke-width="1.8"></polyline>
+          <circle cx="240" cy="42" r="2.6" fill="#1f63a8"></circle>
+        </svg>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lh"><span class="lt">4 · 재무</span><span class="ln">2026 반기보고서 · 확정 · 전기 대비</span></div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+        <sc-for list="{{fin}}" as="f" hint-placeholder-count="4">
+          <span style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 11.5px; color: #626d8a;">{{f.k}}</span>
+            <b class="m" style="font-size: 15px; font-weight: 600;">{{f.v}}</b>
+            <span class="m" style="font-size: 11.5px; color: {{f.hue}};">{{f.d}}</span>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lh"><span class="lt">5 · 공매도</span><span class="ln">20거래일 비중 추이</span></div>
+      <div style="display: flex; align-items: center; gap: 22px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 11.5px; color: #626d8a;">직전 거래일 비중</span>
+          <b class="m" style="font-size: 17px; font-weight: 600;">6.4%</b>
+        </div>
+        <svg width="270" height="46" viewBox="0 0 270 46">
+          <sc-for list="{{shorts}}" as="s" hint-placeholder-count="20">
+            <rect x="{{s.x}}" y="{{s.y}}" width="9" height="{{s.h}}" fill="{{s.fill}}"></rect>
+          </sc-for>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin: 0 24px 18px; background: #ffffff; border: 1px solid #d3d8e4; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 9px;">
+    <div class="lh"><span class="lt">근거 서술</span><span class="ln">모델이 쓰고 코드가 검증했다 · 판정과 점수는 바꾸지 못한다</span></div>
+    <p style="margin: 0; font-size: 13.5px; line-height: 1.75; color: #3d465f;">
+      차트는 거래량 수축 뒤 확장을 가리키지만, 최근 30일 안에 전환사채 발행 결정이 있고 본문의 유통물량 대비 비율은 18.63%다. 전환가액 조정 하한 70% 조항이 함께 적혀 있다. 같은 기간 외국인은 1,482억, 기관은 306억을 순매도했다. 08-14 공급계약은 최근 매출액의 8.1% 규모로 확인된다.
+    </p>
+    <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid #d3d8e4; padding-top: 10px;">
+      <span style="font-size: 12px; color: #8b94ac;">이 판정은 <b style="color: #3d465f;">업황 · 시장 전체 흐름</b>을 보지 않는다. 재무는 최근 확정 보고서 기준이라 그 이후를 담지 못하고, 공매도 잔고는 이번 판에 없다</span>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const R = '#c9283e', G = '#0f6e5c', B = '#1f63a8', N = '#3d465f';
+    const bars = [3.1,3.4,3.0,3.6,4.2,3.9,4.4,4.1,4.8,5.2,4.9,5.5,5.1,5.8,6.0,5.6,6.3,6.1,6.6,6.4];
+    return {
+      parts: [
+        { label: '오버행 18.63%', delta: '-25', hue: R },
+        { label: '전환가액 리픽싱 조항', delta: '-5', hue: R },
+        { label: '위험 유형 1건', delta: '-8', hue: R },
+        { label: '외국인·기관 30일 순매도', delta: '-8', hue: R },
+        { label: '공급계약 (사실)', delta: '+4', hue: G },
+        { label: '부채비율 84%', delta: '+2', hue: G },
+      ],
+      conds: [
+        { label: '수축 구간', actual: '11일' },
+        { label: '거래량비', actual: '0.42배' },
+        { label: '변동성 수축', actual: '0.55배' },
+        { label: '확장일 거래량', actual: '2.8배' },
+      ],
+      news: [
+        { d: '08-29', t: 'HBM 장비 수주 확대 전망에 장비주 동반 강세', src: '한국경제' },
+        { d: '08-26', t: '전환사채 발행 결정 공시 이후 수급 공방', src: '머니투데이' },
+        { d: '08-23', t: '2분기 실적 시장 기대치 하회', src: '연합뉴스' },
+      ],
+      fin: [
+        { k: '매출액', v: '1조 5,320억', d: '+12.4%', hue: G },
+        { k: '영업이익', v: '2,140억', d: '-8.1%', hue: R },
+        { k: '당기순이익', v: '1,680억', d: '-11.2%', hue: R },
+        { k: '부채비율', v: '84%', d: '이익잉여금 (+)', hue: N },
+      ],
+      shorts: bars.map((v, i) => ({
+        x: i * 13.5, y: 46 - v * 6.5, h: v * 6.5,
+        fill: i >= 16 ? '#8b94ac' : '#d3d8e4',
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

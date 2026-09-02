@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+    a { color: #c9283e; text-decoration: none; } a:hover { color: #9c1e30; text-decoration: underline; }
+    .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    table { border-collapse: collapse; }
+    td { vertical-align: middle; }
+    .ix td { border-bottom: 1px solid #e5e8ef; padding: 5px 0; font-size: 13px; }
+  </style>
+</helmet>
+
+<div style="width: 640px; background: #eff1f5; padding: 0 0 24px;">
+
+  <table width="640" cellpadding="0" cellspacing="0" style="background: #e5e8ef; border-bottom: 1px solid #d3d8e4;">
+    <tr>
+      <td style="padding: 10px 22px;">
+        <div style="font-size: 11px; color: #8b94ac; letter-spacing: .06em; margin-bottom: 3px;">제목</div>
+        <div style="font-size: 14px; font-weight: 600; color: #121829;">[검증] 09/01 신호 14건 · 불일치 3</div>
+      </td>
+    </tr>
+  </table>
+
+  <table width="640" cellpadding="0" cellspacing="0" style="background: #ffffff;">
+    <tr>
+      <td style="padding: 22px 22px 14px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size: 17px; font-weight: 600; color: #121829; letter-spacing: -.015em;">2026-09-01 신호 검증</td>
+            <td align="right" class="m" style="font-size: 11.5px; color: #8b94ac;">rules v3 · 기준일 08-29</td>
+          </tr>
+        </table>
+        <div style="font-size: 12.5px; color: #626d8a; margin-top: 6px;">
+          정합 <b class="m" style="color: #0f6e5c;">6</b> ·
+          불일치 <b class="m" style="color: #c9283e;">3</b> ·
+          무관 <b class="m" style="color: #626d8a;">5</b>
+        </div>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding: 0 22px;">
+        <table width="100%" cellpadding="0" cellspacing="0" class="ix">
+          <tr>
+            <td colspan="4" style="border-bottom: 1px solid #bfc6d6; padding-bottom: 5px; font-size: 11px; color: #8b94ac; letter-spacing: .04em;">전 종목</td>
+          </tr>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="14">
+            <tr>
+              <td width="16">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: {{r.hue}};"></span>
+              </td>
+              <td>
+                <b style="font-weight: 600; color: #121829;">{{r.name}}</b>
+                <span class="m" style="font-size: 11px; color: #8b94ac; margin-left: 5px;">{{r.ticker}}</span>
+                <span style="font-size: 11.5px; color: #626d8a; margin-left: 7px;">{{r.strategy}}</span>
+              </td>
+              <td width="60" align="right">
+                <span style="display: inline-block; width: 44px; height: 6px; border-radius: 3px; background: #e5e8ef; overflow: hidden; vertical-align: middle;">
+                  <span style="display: block; height: 6px; width: {{r.barw}}; background: {{r.hue}};"></span>
+                </span>
+              </td>
+              <td width="34" align="right" class="m" style="font-weight: 600; color: #121829;">{{r.score}}</td>
+            </tr>
+          </sc-for>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding: 14px 22px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #eff1f5; border-radius: 6px;">
+          <tr>
+            <td style="padding: 11px 14px; font-size: 12px; color: #3d465f; line-height: 1.65;">
+              <b style="font-weight: 600;">이 점수는 신호의 근거가 받쳐지는지를 잰다.</b>
+              업황 · 시장 전체 흐름은 보지 않으며, 재무는 최근 확정 보고서 기준이라 그 이후를 담지 못한다.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding: 20px 22px 0; font-size: 11px; color: #8b94ac; letter-spacing: .04em;">불일치 3건</td>
+    </tr>
+
+    <sc-for list="{{cards}}" as="c" hint-placeholder-count="3">
+      <tr>
+        <td style="padding: 9px 22px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #d3d8e4; border-left: 3px solid #c9283e; border-radius: 5px;">
+            <tr>
+              <td style="padding: 12px 14px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="font-size: 14px; font-weight: 600; color: #121829;">
+                      {{c.name}}
+                      <span class="m" style="font-size: 11px; color: #8b94ac; font-weight: 400; margin-left: 5px;">{{c.ticker}}</span>
+                    </td>
+                    <td align="right" class="m" style="font-size: 13px; font-weight: 600; color: #c9283e;">{{c.score}}</td>
+                  </tr>
+                </table>
+                <div style="font-size: 12px; color: #3d465f; margin-top: 7px;">
+                  <span class="m" style="color: #626d8a;">{{c.d}}</span>
+                  <b style="font-weight: 600; margin-left: 5px;">{{c.title}}</b>
+                  <a href="#" style="margin-left: 6px; font-size: 11.5px;">DART 원문</a>
+                </div>
+                <div style="font-size: 12.5px; color: #626d8a; line-height: 1.7; margin-top: 6px;">{{c.excerpt}}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </sc-for>
+
+    <tr>
+      <td align="center" style="padding: 22px 22px 6px;">
+        <a href="#" style="display: inline-block; background: #121829; color: #ffffff; font-size: 13.5px; font-weight: 500; padding: 11px 26px; border-radius: 6px;">전체 · 증거 다섯 갈래 보기</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 0 22px 20px; font-size: 11.5px; color: #8b94ac;">
+        나머지 11건과 근거 서술 전문은 대시보드에 있다
+      </td>
+    </tr>
+
+    <tr>
+      <td style="border-top: 1px solid #d3d8e4; padding: 14px 22px 20px; font-size: 11.5px; color: #8b94ac; line-height: 1.75;">
+        <b style="color: #626d8a; font-weight: 600;">투자 권고가 아닙니다 · 참고용 테스트</b><br>
+        판정과 점수는 코드가 규칙으로 낸다. 모델은 그 결과를 설명할 뿐 바꾸지 못한다.
+        불일치는 「근거가 신호와 어긋난다」이지 「떨어진다」가 아니다.<br>
+        krx-signal-verify · 본인 수신 전용
+      </td>
+    </tr>
+  </table>
+</div>
+
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = { 정합: '#0f6e5c', 불일치: '#c9283e', 무관: '#626d8a' };
+    const raw = [
+      ['불일치', '한미반도체', '042700', 'VCP 수축', 34],
+      ['불일치', '에코프로비엠', '247540', 'MTF 정배열', 38],
+      ['불일치', '위메이드', '112040', '밴드 스퀴즈', 41],
+      ['무관', '삼성중공업', '010140', 'VCP 수축', 48],
+      ['무관', '현대로템', '064350', 'MTF 정배열', 50],
+      ['무관', 'NAVER', '035420', '밴드 스퀴즈', 52],
+      ['무관', '삼성전자', '005930', '주봉 눌림목', 53],
+      ['무관', 'SK하이닉스', '000660', 'MTF 정배열', 55],
+      ['정합', 'KB금융', '105560', '주봉 눌림목', 63],
+      ['정합', '기아', '000270', '밴드 스퀴즈', 65],
+      ['정합', '두산에너빌리티', '034020', 'MTF 정배열', 68],
+      ['정합', 'HD현대일렉트릭', '267260', '주봉 눌림목', 71],
+      ['정합', '삼양식품', '003230', '장기 턴어라운드', 73],
+      ['정합', '한화에어로스페이스', '012450', 'MTF 정배열', 76],
+    ];
+    return {
+      rows: raw.map(([stand, name, ticker, strategy, score]) => ({
+        name, ticker, strategy, score, hue: C[stand], barw: Math.round(score * 0.44) + 'px',
+      })),
+      cards: [
+        { name: '한미반도체', ticker: '042700', score: 34, d: '08-22', title: '전환사채권발행결정',
+          excerpt: '본문의 유통물량 대비 비율은 18.63%이고 전환가액 조정 하한 70% 조항이 함께 적혀 있다. 같은 기간 외국인 1,482억 · 기관 306억 순매도.' },
+        { name: '에코프로비엠', ticker: '247540', score: 38, d: '08-19', title: '유상증자결정',
+          excerpt: '제3자배정 방식으로 발행 주식 수는 기존 대비 6.2%다. 30일 누적 기관 순매도가 이어졌고, 반기 영업이익은 전기 대비 감소로 확인된다.' },
+        { name: '위메이드', ticker: '112040', score: 41, d: '08-25', title: '타법인주식및출자증권취득결정',
+          excerpt: '취득금액은 자기자본의 11.4%다. 공매도 비중이 20거래일 평균 3.1%에서 직전 거래일 7.8%로 올랐다. 재무는 확정 보고서 미제출로 비어 있다.' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

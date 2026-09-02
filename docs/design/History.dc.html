@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+    a { color: #c9283e; text-decoration: none; } a:hover { color: #9c1e30; text-decoration: underline; }
+    .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .th { font-size: 11.5px; color: #8b94ac; font-weight: 500; letter-spacing: .04em; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: #eff1f5; color: #121829; display: flex; flex-direction: column;">
+
+  <div style="display: flex; align-items: center; gap: 8px; background: #e5e8ef; border-bottom: 1px solid #d3d8e4; padding: 8px 24px; font-size: 12.5px; color: #3d465f;">
+    <b style="font-weight: 600;">투자 권고가 아닙니다 · 참고용 테스트</b>
+    <span style="color: #8b94ac;">사후 수익률은 판정을 되돌아보기 위한 관측치이며, 개별 종목의 맞고 틀림을 매기지 않습니다</span>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border-bottom: 1px solid #d3d8e4; padding: 0 24px; height: 56px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <b style="font-size: 16px; font-weight: 600; letter-spacing: -.01em;">검증</b>
+      <span class="m" style="font-size: 11.5px; color: #8b94ac;">krx-signal-verify</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px;">
+      <span style="color: #626d8a;">오늘</span>
+      <b style="font-weight: 600; border-bottom: 2px solid #c9283e; padding-bottom: 2px;">이력</b>
+      <span style="color: #626d8a;">분별력</span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 12px 24px; background: #fafbfd; border-bottom: 1px solid #d3d8e4;">
+    <span class="th">기간</span>
+    <span class="m" style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; padding: 4px 11px; border-radius: 4px;">2026-06-02 ~ 09-01</span>
+    <span class="th" style="margin-left: 10px;">종목</span>
+    <span style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; color: #8b94ac; padding: 4px 11px; border-radius: 4px; width: 150px;">전체</span>
+    <span class="th" style="margin-left: 10px;">표본</span>
+    <div style="display: flex; gap: 4px;">
+      <span style="font-size: 12.5px; background: #121829; color: #ffffff; padding: 3px 11px; border-radius: 4px;">배치</span>
+      <span style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; color: #3d465f; padding: 3px 11px; border-radius: 4px;">온디맨드</span>
+    </div>
+    <span style="margin-left: auto; font-size: 12.5px; color: #626d8a;">판정 <b class="m" style="color: #121829;">412</b>건</span>
+  </div>
+
+  <div style="background: #ffffff;">
+    <div style="display: grid; grid-template-columns: 96px 92px 1fr 112px 106px 84px 84px 84px 92px; align-items: center; gap: 12px; padding: 9px 24px; border-bottom: 1px solid #bfc6d6;">
+      <span class="th">판정일</span>
+      <span class="th">판정</span>
+      <span class="th">종목</span>
+      <span class="th">전략</span>
+      <span class="th">점수</span>
+      <span class="th" style="text-align: right;">5일</span>
+      <span class="th" style="text-align: right;">20일</span>
+      <span class="th" style="text-align: right;">60일</span>
+      <span class="th" style="text-align: right;">산식</span>
+    </div>
+
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="11">
+      <sc-if value="{{r.divider}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 7px 24px; background: #e5e8ef; border-bottom: 1px solid #d3d8e4;">
+          <span class="m" style="font-size: 11.5px; color: #3d465f; font-weight: 600;">rules v3</span>
+          <span style="font-size: 11.5px; color: #626d8a;">2026-08-24 — 수급 가중치 +8 → +6. 위쪽은 v3, 아래쪽은 v2로 잰 값이라 한 표에서 직접 비교하지 않는다</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{r.row}}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: 96px 92px 1fr 112px 106px 84px 84px 84px 92px; align-items: center; gap: 12px; padding: 0 24px; min-height: 44px; border-bottom: 1px solid #d3d8e4;">
+          <span class="m" style="font-size: 12.5px; color: #3d465f;">{{r.d}}</span>
+          <span style="display: inline-flex; justify-content: center; font-size: 12px; font-weight: 600; padding: 3px 0; border-radius: 4px; width: 60px; background: {{r.wash}}; color: {{r.hue}};">{{r.stand}}</span>
+          <span style="display: flex; align-items: baseline; gap: 8px;">
+            <b style="font-weight: 600; font-size: 13.5px;">{{r.name}}</b>
+            <span class="m" style="font-size: 11.5px; color: #8b94ac;">{{r.ticker}}</span>
+          </span>
+          <span style="font-size: 12.5px; color: #3d465f;">{{r.strategy}}</span>
+          <span style="display: flex; align-items: center; gap: 9px;">
+            <span style="display: block; width: 44px; height: 6px; border-radius: 3px; background: #e5e8ef; overflow: hidden;">
+              <span style="display: block; height: 6px; width: {{r.barw}}; background: {{r.hue}};"></span>
+            </span>
+            <b class="m" style="font-size: 13px; font-weight: 600;">{{r.score}}</b>
+          </span>
+          <span class="m" style="font-size: 12.5px; text-align: right; color: {{r.t5}};">{{r.h5}}</span>
+          <span class="m" style="font-size: 12.5px; text-align: right; color: {{r.t20}};">{{r.h20}}</span>
+          <span class="m" style="font-size: 12.5px; text-align: right; color: {{r.t60}};">{{r.h60}}</span>
+          <span class="m" style="font-size: 11.5px; text-align: right; color: #8b94ac;">{{r.rv}}</span>
+        </div>
+      </sc-if>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 13px 24px; background: #fafbfd; border-top: 1px solid #bfc6d6;">
+    <span style="font-size: 12px; color: #626d8a;">
+      5 · 20 · 60일 칸은 <b style="color: #121829; font-weight: 600;">기준선 대비 초과수익</b>이다.
+      기준선은 <b class="m" style="color: #121829;">등가중 시장 프록시</b> — 같은 시장 전 종목 수익률의 중앙값.
+      <span class="m" style="color: #8b94ac;">—</span> 은 아직 도래하지 않은 구간이다
+    </span>
+    <span style="font-size: 12.5px; color: #626d8a;">1 / 38 쪽</span>
+  </div>
+</div>
+
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = { 정합: ['#0f6e5c', '#e6f2ef'], 불일치: ['#c9283e', '#fbeaec'], 무관: ['#626d8a', '#e5e8ef'] };
+    const tone = (s) => (s === '—' ? '#8b94ac' : s.startsWith('-') ? '#1f63a8' : '#c9283e');
+    const raw = [
+      ['09-01', '불일치', '한미반도체', '042700', 'VCP 수축', 34, '—', '—', '—', 'v3'],
+      ['08-29', '정합', '한화에어로스페이스', '012450', 'MTF 정배열', 76, '+2.1%', '—', '—', 'v3'],
+      ['08-28', '무관', 'NAVER', '035420', '밴드 스퀴즈', 52, '-0.4%', '—', '—', 'v3'],
+      ['08-27', '정합', 'HD현대일렉트릭', '267260', '주봉 눌림목', 71, '+4.8%', '—', '—', 'v3'],
+      ['08-26', '불일치', '에코프로비엠', '247540', 'MTF 정배열', 38, '-3.6%', '—', '—', 'v3'],
+      ['08-25', '정합', '두산에너빌리티', '034020', 'MTF 정배열', 68, '+1.2%', '—', '—', 'v3'],
+      ['DIV'],
+      ['08-22', '무관', '삼성중공업', '010140', 'VCP 수축', 47, '+0.8%', '-1.4%', '—', 'v2'],
+      ['08-21', '불일치', '위메이드', '112040', '밴드 스퀴즈', 40, '-2.2%', '-5.1%', '—', 'v2'],
+      ['08-20', '정합', 'KB금융', '105560', '주봉 눌림목', 64, '+1.9%', '+3.3%', '—', 'v2'],
+      ['06-12', '정합', '삼양식품', '003230', '장기 턴어라운드', 73, '+3.4%', '+6.1%', '+11.8%', 'v2'],
+      ['06-09', '불일치', '기아', '000270', 'VCP 수축', 36, '-1.1%', '-2.8%', '-4.2%', 'v2'],
+    ];
+    return {
+      rows: raw.map((x) => {
+        if (x[0] === 'DIV') return { divider: true, row: false };
+        const [d, stand, name, ticker, strategy, score, h5, h20, h60, rv] = x;
+        return {
+          divider: false, row: true, d, stand, name, ticker, strategy, score, h5, h20, h60, rv,
+          hue: C[stand][0], wash: C[stand][1],
+          barw: Math.round(score * 0.44) + 'px',
+          t5: tone(h5), t20: tone(h20), t60: tone(h60),
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

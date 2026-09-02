@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.ruff.lint.isort]
+# 이걸 안 주면 ruff가 supabase를 로컬 패키지로 오인해 import 순서를 뒤집는다
+# (선행 두 프로젝트에서 실제 발생 — venv/lib에 설치돼 있어도 프로젝트 루트 기준으로 판단한다).
+known-first-party = ["verify"]
+known-third-party = ["supabase", "psycopg", "langgraph", "anthropic", "pytest"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+files = ["verify", "scripts", "tests"]
+
+# LangGraph의 데코레이터·제네릭은 strict 모드에서 Any를 흘린다.
+# 우리 코드의 타입은 그대로 강제하되, 프레임워크 경계에서만 완화한다.
+[[tool.mypy.overrides]]
+module = ["langgraph.*", "langchain_core.*", "supabase.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

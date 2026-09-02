@@ -9,3 +9,7 @@ __pycache__/
 .DS_Store
 node_modules/
 .next/
+
+# 시안 캔버스 산출물 — 원본은 docs/design/*.dc.html + canvas.json 이다.
+# 2.4MB짜리 에디터 페이로드를 리포에 넣지 않는다 (재생성 방법은 docs/design/README.md).
+docs/design/*-surfaces.html

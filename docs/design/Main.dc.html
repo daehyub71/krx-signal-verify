@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; word-break: keep-all; -webkit-font-smoothing: antialiased; }
+    a { color: #c9283e; text-decoration: none; } a:hover { color: #9c1e30; text-decoration: underline; }
+    .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .th { font-size: 11.5px; color: #8b94ac; font-weight: 500; letter-spacing: .04em; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: #eff1f5; color: #121829; display: flex; flex-direction: column;">
+
+  <div style="display: flex; align-items: center; gap: 8px; background: #e5e8ef; border-bottom: 1px solid #d3d8e4; padding: 8px 24px; font-size: 12.5px; color: #3d465f;">
+    <b style="font-weight: 600;">투자 권고가 아닙니다 · 참고용 테스트</b>
+    <span style="color: #8b94ac;">판정과 점수는 신호의 근거가 받쳐지는지를 재는 관측치이며, 매매 판단이 아닙니다</span>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border-bottom: 1px solid #d3d8e4; padding: 0 24px; height: 56px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <b style="font-size: 16px; font-weight: 600; letter-spacing: -.01em;">검증</b>
+      <span class="m" style="font-size: 11.5px; color: #8b94ac;">krx-signal-verify</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px;">
+        <b style="font-weight: 600; border-bottom: 2px solid #c9283e; padding-bottom: 2px;">오늘</b>
+        <span style="color: #626d8a;">이력</span>
+        <span style="color: #626d8a;">분별력</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0; border: 1px solid #bfc6d6; border-radius: 6px; overflow: hidden; background: #ffffff;">
+        <span class="m" style="font-size: 12.5px; color: #8b94ac; padding: 0 10px; line-height: 32px;">종목코드 검증</span>
+        <span style="width: 1px; height: 32px; background: #d3d8e4;"></span>
+        <span style="font-size: 12.5px; color: #ffffff; background: #121829; padding: 0 12px; line-height: 32px; font-weight: 500;">요청</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 28px; background: #fafbfd; border-bottom: 1px solid #d3d8e4; padding: 14px 24px;">
+    <div style="display: flex; align-items: baseline; gap: 8px;">
+      <b class="m" style="font-size: 20px; font-weight: 600; letter-spacing: -.02em;">2026-09-01</b>
+      <span style="font-size: 12.5px; color: #8b94ac;">화</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; background: #e6f2ef; color: #0f6e5c; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 4px;">정합 <span class="m">6</span></span>
+      <span style="display: inline-flex; align-items: center; gap: 6px; background: #fbeaec; color: #c9283e; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 4px;">불일치 <span class="m">3</span></span>
+      <span style="display: inline-flex; align-items: center; gap: 6px; background: #e5e8ef; color: #626d8a; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 4px;">무관 <span class="m">5</span></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 18px; margin-left: auto; font-size: 12px; color: #626d8a;">
+      <span>신호 <b class="m" style="color: #121829;">14</b>건 · 억제 제외</span>
+      <span>데이터 기준일 <b class="m" style="color: #121829;">08-29</b></span>
+      <span class="m" style="background: #e5e8ef; padding: 3px 8px; border-radius: 4px; color: #3d465f;">rules v3</span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 10px 24px; background: #eff1f5; border-bottom: 1px solid #d3d8e4;">
+    <span class="th">판정</span>
+    <div style="display: flex; gap: 4px;">
+      <span style="font-size: 12.5px; background: #121829; color: #ffffff; padding: 3px 11px; border-radius: 4px;">전체</span>
+      <span style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; color: #3d465f; padding: 3px 11px; border-radius: 4px;">정합</span>
+      <span style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; color: #3d465f; padding: 3px 11px; border-radius: 4px;">불일치</span>
+      <span style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; color: #3d465f; padding: 3px 11px; border-radius: 4px;">무관</span>
+    </div>
+    <span class="th" style="margin-left: 14px;">전략</span>
+    <span style="font-size: 12.5px; border: 1px solid #d3d8e4; background: #ffffff; color: #3d465f; padding: 3px 11px; border-radius: 4px;">다섯 전략 전부</span>
+    <span style="margin-left: auto; font-size: 12.5px; color: #626d8a;">정렬 <b style="color: #121829; font-weight: 600;">점수 낮은 순</b></span>
+  </div>
+
+  <div style="background: #ffffff;">
+    <div style="display: grid; grid-template-columns: 92px 1fr 108px 128px 92px 76px 84px 22px; align-items: center; gap: 14px; padding: 9px 24px; border-bottom: 1px solid #bfc6d6;">
+      <span class="th">판정</span>
+      <span class="th">종목</span>
+      <span class="th">전략</span>
+      <span class="th">점수</span>
+      <span class="th" style="text-align: right;">종가</span>
+      <span class="th" style="text-align: right;">등락</span>
+      <span class="th">증거</span>
+      <span></span>
+    </div>
+
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+      <div style="display: grid; grid-template-columns: 92px 1fr 108px 128px 92px 76px 84px 22px; align-items: center; gap: 14px; padding: 0 24px; min-height: 48px; border-bottom: 1px solid #d3d8e4;">
+        <span style="display: inline-flex; justify-content: center; font-size: 12px; font-weight: 600; padding: 3px 0; border-radius: 4px; width: 60px; background: {{r.wash}}; color: {{r.hue}};">{{r.stand}}</span>
+        <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+          <b style="font-weight: 600; letter-spacing: -.01em; font-size: 14px;">{{r.name}}</b>
+          <span class="m" style="font-size: 11.5px; color: #8b94ac;">{{r.ticker}}</span>
+        </span>
+        <span style="font-size: 12.5px; color: #3d465f;">{{r.strategy}}</span>
+        <span style="display: flex; align-items: center; gap: 9px;">
+          <span style="display: block; width: 44px; height: 6px; border-radius: 3px; background: #e5e8ef; overflow: hidden;">
+            <span style="display: block; height: 6px; width: {{r.barw}}; background: {{r.hue}};"></span>
+          </span>
+          <b class="m" style="font-size: 13.5px; font-weight: 600;">{{r.score}}</b>
+        </span>
+        <span class="m" style="font-size: 13.5px; text-align: right;">{{r.close}}</span>
+        <span class="m" style="font-size: 13px; text-align: right; color: {{r.tone}};">{{r.chg}}</span>
+        <span style="display: flex; align-items: flex-end; gap: 3px; height: 13px;">
+          <sc-for list="{{r.ev}}" as="e" hint-placeholder-count="5">
+            <span style="display: block; width: 5px; height: 13px; border-radius: 1px; background: {{e.fill}};"></span>
+          </sc-for>
+        </span>
+        <span style="font-size: 11px; color: #8b94ac;">›</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #fafbfd; border-bottom: 1px solid #d3d8e4;">
+    <span style="font-size: 11.5px; color: #8b94ac;">증거 다섯 갈래 — 왼쪽부터 공시 · 뉴스 · 수급 · 재무 · 공매도. 옅은 칸은 그날 얻지 못한 갈래다</span>
+    <span style="font-size: 12.5px; color: #626d8a;">나머지 <b class="m" style="color: #121829;">4</b>건 더 보기</span>
+  </div>
+
+  <div style="padding: 14px 24px 20px; background: #eff1f5;">
+    <p style="margin: 0; font-size: 12.5px; color: #3d465f; line-height: 1.6;">
+      <b style="font-weight: 600;">이 점수는 신호의 근거가 받쳐지는지를 잰다.</b>
+      업황 · 시장 전체 흐름은 보지 않는다. 재무는 최근 확정 보고서 기준이라 그 이후의 변화를 담지 못한다.
+    </p>
+  </div>
+</div>
+
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const C = { 정합: ['#0f6e5c', '#e6f2ef'], 불일치: ['#c9283e', '#fbeaec'], 무관: ['#626d8a', '#e5e8ef'] };
+    const raw = [
+      ['불일치', '한미반도체', '042700', 'VCP 수축', 34, '96,400', '+1.8%', 'up', [1,1,1,1,0]],
+      ['불일치', '에코프로비엠', '247540', 'MTF 정배열', 38, '118,700', '-2.4%', 'down', [1,1,1,1,0]],
+      ['불일치', '위메이드', '112040', '밴드 스퀴즈', 41, '38,250', '+0.6%', 'up', [1,1,1,0,0]],
+      ['무관', '삼성중공업', '010140', 'VCP 수축', 48, '14,820', '+0.3%', 'up', [0,1,1,1,0]],
+      ['무관', '현대로템', '064350', 'MTF 정배열', 50, '62,100', '-0.8%', 'down', [0,1,1,1,0]],
+      ['무관', 'NAVER', '035420', '밴드 스퀴즈', 52, '211,500', '+0.4%', 'up', [0,1,1,1,0]],
+      ['정합', 'KB금융', '105560', '주봉 눌림목', 63, '87,300', '+1.1%', 'up', [1,1,1,0,0]],
+      ['정합', '두산에너빌리티', '034020', 'MTF 정배열', 68, '41,650', '+3.2%', 'up', [1,1,1,1,0]],
+      ['정합', 'HD현대일렉트릭', '267260', '주봉 눌림목', 71, '354,000', '+2.7%', 'up', [1,1,1,1,0]],
+      ['정합', '한화에어로스페이스', '012450', 'MTF 정배열', 76, '682,000', '+4.1%', 'up', [1,1,1,1,0]],
+    ];
+    return {
+      rows: raw.map(([stand, name, ticker, strategy, score, close, chg, t, ev]) => ({
+        stand, name, ticker, strategy, score, close, chg,
+        hue: C[stand][0], wash: C[stand][1],
+        barw: Math.round(score * 0.44) + 'px',
+        tone: t === 'up' ? '#c9283e' : '#1f63a8',
+        ev: ev.map((on) => ({ fill: on ? '#626d8a' : '#e5e8ef' })),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>
