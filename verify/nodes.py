@@ -31,11 +31,12 @@ TO_COLLECT = "collect"
 TO_WAIT = "wait"
 TO_REPORT = "report"
 
-# M0에서 통과만 하는 노드들. 뒤 마일스톤에서 하나씩 실물이 된다.
+# 아직 통과만 하는 노드들. 뒤 마일스톤에서 하나씩 실물이 된다.
+# **실물이 되면 여기서 뺀다** — 안 빼면 스텁 테스트가 그 노드의 I/O를 부른다.
+# `gate`가 그랬다: 로컬엔 `.env`가 있어 통과하고 **CI에서만 터졌다** (2026-09-02).
 STUB_NODES = (
     "fill_outcomes",
     "aggregate",
-    "gate",
     "fetch_signals",
     "fetch_one",
     "judge",

@@ -135,6 +135,17 @@ def test_stub_nodes_pass_through_without_raising(name: str) -> None:
     assert isinstance(fn(st()), dict)
 
 
+def test_implemented_nodes_are_not_listed_as_stubs() -> None:
+    """실물이 된 노드가 목록에 남으면 **스텁 테스트가 그 노드의 I/O를 부른다.**
+
+    로컬엔 `.env`가 있어 통과하고 CI에서만 터진다 — 2026-09-02에 `gate`가 그랬다.
+    """
+    src = inspect.getsource(nodes)
+    for name in nodes.STUB_NODES:
+        body = src.split(f"def {name}(")[1].split("\n\n\ndef ")[0]
+        assert body.rstrip().endswith("return {}"), f"{name}은 이미 실물이다 — STUB_NODES에서 빼라"
+
+
 def test_fan_out_returns_one_send_per_signal() -> None:
     s = st(signals=[sig(), sig()])
     assert len(nodes.fan_out(s)) == 2
