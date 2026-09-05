@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/*
+ * 토큰 — 직계 상위 krx-signal-alerts/web과 같다 (DESIGN §0). 이 화면은 그 신호를 검증하는 자리라 같은 얼굴이어야 한다.
+ * 판정 색(--agree · --conflict)만 이 프로젝트가 더했다 — 차트 팔레트 검증기 통과값 (2026-09-06).
+ * 등락(--up · --down)과 판정은 다른 축이다: 빨강이 상승이라 정합만 색 계열을 뺐다.
+ *
+ * 다크는 세 상태를 처리한다 — 시스템 기본 · prefers-color-scheme · [data-theme] 토글 (토글이 양방향으로 이긴다).
+ */
+:root {
+  --ground: #eff1f5; --surface: #ffffff; --sunk: #e5e8ef; --raise: #fafbfd;
+  --ink: #121829; --ink-2: #3d465f; --muted: #626d8a; --faint: #8b94ac;
+  --line: #d3d8e4; --line-2: #bfc6d6;
+  --up: #c9283e; --up-w: #fbeaec; --down: #1f63a8; --down-w: #e7f0f9;
+  --agree: #0E8A6E; --conflict: #C9283E;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1120; --surface: #151b2c; --sunk: #101626; --raise: #1a2135;
+    --ink: #e4e8f2; --ink-2: #bac3d8; --muted: #8c97b5; --faint: #6b7694;
+    --line: #272f49; --line-2: #38425f;
+    --up: #ff6377; --up-w: #2a1620; --down: #5fa6ec; --down-w: #101f31;
+    --agree: #2A9D85; --conflict: #E0556A;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0d1120; --surface: #151b2c; --sunk: #101626; --raise: #1a2135;
+  --ink: #e4e8f2; --ink-2: #bac3d8; --muted: #8c97b5; --faint: #6b7694;
+  --line: #272f49; --line-2: #38425f;
+  --up: #ff6377; --up-w: #2a1620; --down: #5fa6ec; --down-w: #101f31;
+  --agree: #2A9D85; --conflict: #E0556A;
+}
+
+@theme inline {
+  --color-ground: var(--ground); --color-surface: var(--surface); --color-sunk: var(--sunk); --color-raise: var(--raise);
+  --color-ink: var(--ink); --color-ink-2: var(--ink-2); --color-muted: var(--muted); --color-faint: var(--faint);
+  --color-line: var(--line); --color-line-2: var(--line-2);
+  --color-up: var(--up); --color-up-w: var(--up-w); --color-down: var(--down); --color-down-w: var(--down-w);
+  --color-agree: var(--agree); --color-conflict: var(--conflict);
+  --font-sans: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+html { background: var(--ground); color: var(--ink); }
+body {
+  margin: 0; font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  background: var(--ground); color: var(--ink);
+  /* 하단 띠(40px)가 항상 보인다 — 내용이 그 밑으로 들어가지 않게 */
+  padding-bottom: 48px;
+}
+a { color: var(--down); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* 판정 칩 — 색만으로 구별하지 않는다. 글자가 늘 붙는다 (DESIGN §0). */
+.chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chip-agree { background: var(--agree); color: #fff; }
+.chip-conflict { background: var(--conflict); color: #fff; }
+.chip-none { border: 1px solid var(--line-2); color: var(--muted); }
+
+/* 표 — 행 40px · 머리 12px */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { text-align: left; font-weight: 600; font-size: 12px; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl td { padding: 0 12px; height: 40px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+.tbl tr:last-child td { border-bottom: 0; }
+.num { text-align: right; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+.h { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+
+/* 분별력 — 불일치 띠는 빗금. 색약 대비의 보조 표시 (DESIGN §0). */
+.hatch { background: repeating-linear-gradient(135deg, var(--conflict) 0 3px, var(--surface) 3px 5px); border: 1px solid var(--conflict); }
