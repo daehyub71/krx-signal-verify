@@ -50,8 +50,24 @@ FORBIDDEN: tuple[str, ...] = (
     "비중",
 )
 
-# 금지어 검사에서 **먼저 지우는** 합성어. 이 목록이 없으면 수급을 말할 수 없다.
-ALLOWED_COMPOUNDS: tuple[str, ...] = ("순매수", "순매도", "매수세", "매도세", "매수관여율")
+# 금지어 검사에서 **먼저 지우는** 합성어. 이 목록이 없으면 수급도 공매도도 말할 수 없다.
+#
+# **`공매도`가 `매도`에 걸린다** — 선행에는 공매도 갈래가 없어 이 말이 목록에 없었다.
+# `공매도 비중`은 `비중`에도 걸린다. F32가 요구하는 「거래량·비중(%)」을 못 쓰게 되는 셈이다
+# (2026-09-05, F34 작업 중 테스트가 잡았다).
+#
+# **긴 것부터 지운다** — `공매도`를 먼저 지우면 `비중`이 남아 걸린다.
+# 순서를 사람이 지키게 두지 않고 `has_forbidden`이 길이순으로 정렬한다.
+ALLOWED_COMPOUNDS: tuple[str, ...] = (
+    "공매도 비중",
+    "공매도비중",
+    "공매도",
+    "순매수",
+    "순매도",
+    "매수세",
+    "매도세",
+    "매수관여율",
+)
 
 
 def has_forbidden(text: str) -> str:
@@ -64,10 +80,11 @@ def has_forbidden(text: str) -> str:
         걸린 금지어 하나. 무엇이 걸렸는지 알아야 고칠 수 있으므로 bool이 아니라 말을 돌려준다.
 
     Note:
-        `순매수`·`순매도` 같은 사실 표현은 **먼저 지우고** 검사한다.
+        `순매수`·`공매도 비중` 같은 사실 표현은 **먼저 지우고** 검사한다. 긴 것부터 지운다.
     """
     rest = text
-    for word in ALLOWED_COMPOUNDS:
+    # **긴 것부터.** `공매도`를 `공매도 비중`보다 먼저 지우면 `비중`이 남아 걸린다.
+    for word in sorted(ALLOWED_COMPOUNDS, key=len, reverse=True):
         rest = rest.replace(word, " ")
     return next((w for w in FORBIDDEN if w in rest), "")
 

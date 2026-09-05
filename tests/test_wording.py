@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from verify import wording
 from verify.wording import ALLOWED_COMPOUNDS, FORBIDDEN, has_forbidden
 
 # ── 막아야 하는 것 ───────────────────────────────────────────────
@@ -74,6 +75,36 @@ def test_compounds_are_stripped_before_the_check_not_after() -> None:
     """검사 뒤에 지우면 이미 걸린 뒤다. **순서가 규칙의 전부다.**"""
     assert has_forbidden("순매도 전환") == ""
     assert has_forbidden("순매도 뒤 매도 판단") == "매도", "합성어만 지우고 나머지는 검사해야 한다"
+
+
+def test_short_selling_is_a_fact_not_a_trade() -> None:
+    """**`공매도`가 `매도`에 걸린다.** 선행에는 이 갈래가 없어 목록에 없었다 (2026-09-05).
+
+    F32가 요구하는 「거래량·비중(%)」을 못 쓰게 되는 셈이었다.
+    """
+    assert has_forbidden("공매도 비중 3.2%") == ""
+    assert has_forbidden("공매도 거래량이 늘었다") == ""
+    assert has_forbidden("공매도비중 3.2%") == ""
+
+
+def test_longer_compounds_are_removed_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`공매도`를 먼저 지우면 `비중`이 남아 걸린다.
+
+    목록에 **짧은 것이 앞에 오도록 뒤집어도** 통과해야 한다 — 순서를 사람이 지키게 두지 않고
+    `has_forbidden`이 길이순으로 정렬하기 때문이다. 정렬을 빼면 여기가 깨진다.
+    """
+    assert has_forbidden("공매도 비중이 높다") == ""
+    monkeypatch.setattr(
+        wording, "ALLOWED_COMPOUNDS", ("공매도", "공매도비중", "공매도 비중", "순매수")
+    )
+    assert has_forbidden("공매도 비중이 높다") == ""
+
+
+def test_position_sizing_is_still_blocked() -> None:
+    """`비중`을 통째로 열면 「비중을 늘려라」가 통과한다 — 그것이 막을 말이다."""
+    assert has_forbidden("비중을 늘릴 만하다") == "비중"
+    assert has_forbidden("매도 판단") == "매도"
+    assert has_forbidden("공매도 뒤 매도 판단") == "매도"
 
 
 def test_only_the_listed_compounds_are_exempt() -> None:
