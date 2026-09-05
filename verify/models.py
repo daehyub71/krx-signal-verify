@@ -114,6 +114,26 @@ class Disclosure:
     flr_nm: str = ""
     corrected: bool = False  # `[정정]`·`[기재정정]` 접두가 있었는가
 
+    @classmethod
+    def from_dart_item(cls, item: dict[str, Any]) -> Disclosure:
+        """OpenDART `list.json` 항목 → Disclosure. **REST와 MCP가 같은 매핑을 쓴다.**
+
+        두 경로가 다른 Disclosure를 만들면 폴백이 일어난 날만 판정이 달라진다.
+
+        `corrected`는 채우지 않는다 — 제목 해석은 `flags.classify()` 한 곳에서만 한다.
+
+        Args:
+            item: `rcept_dt`(`YYYYMMDD` 또는 `YYYY-MM-DD`) · `report_nm` · `rcept_no` ·
+                `flr_nm` 키를 가진 사전. MCP 경로는 날짜에 하이픈을 넣어 준다(실측).
+        """
+        raw = str(item["rcept_dt"]).replace("-", "")
+        return cls(
+            rcept_dt=date(int(raw[:4]), int(raw[4:6]), int(raw[6:8])),
+            report_nm=str(item.get("report_nm", "")).strip(),
+            rcept_no=str(item["rcept_no"]),
+            flr_nm=str(item.get("flr_nm", "")).strip(),
+        )
+
     @property
     def link(self) -> str:
         """DART 원문 링크. **모든 공시 항목에 필수** (N3)."""
