@@ -19,10 +19,10 @@
 | M4 적중 추적 | `██████████` | 100% | 9/9 | ✅ 2026-09-05 |
 | M5 서술 + 메일 | `██████████` | 100% | 7/7 | ✅ 2026-09-05 |
 | M6 자동화 | `██████████` | 100% | 5/5 | ✅ 2026-09-05 |
-| M7 웹 4화면 | `░░░░░░░░░░` | 0% | 0/10 | 🔜 |
+| M7 웹 4화면 | `█████████░` | 93% | 13/14 | 🔄 PAT 대기 |
 | M8 상위 공매도 수집 | `░░░░░░░░░░` | 0% | 0/4 | 🔜 |
 | M9 마무리 | `░░░░░░░░░░` | 0% | 0/7 | 🔜 |
-| **전체** | `████████░░` | **78%** | **84/108** | 🔄 M7 |
+| **전체** | `█████████░` | **87%** | **97/112** | 🔄 M7 |
 
 범례: 🔜 대기 · 🔄 진행중 · ✅완료일
 
@@ -37,7 +37,7 @@
 | ~~M0 전~~ | ~~자격증명 채우기~~ — **선행 `krx-signal-briefing/.env`에서 11개 복사** (2026-09-02 사용자 지시). SPEC이 「상위와 같은 값」이라 적어 둔 것들이다. `VERCEL_PROJECT`는 **일부러 뺐다** — 복사하면 선행의 배포를 덮어쓴다 | ✅ 2026-09-02 |
 | M6 전 | fine-grained PAT — 대상 `krx-signal-verify` 1개 · Contents write → 상위 리포 Secrets | ⏳ |
 | M7 전 | **DESIGN 시안 합의** (웹 4화면 + 온디맨드) — 합의 없이 화면 구현 착수 금지. **시안 제출 2026-09-06** (`docs/DESIGN.md` §3 캔버스 링크) | ⏳ 합의 대기 |
-| M7 전 | Vercel 프로젝트 생성 (**SSO 배포 보호를 켠 채**) + `VERCEL_TOKEN` | ⏳ |
+| M7 전 | Vercel 프로젝트 생성 + `VERCEL_TOKEN` | ✅ 2026-09-06 — **단, Hobby 플랜은 프로덕션 도메인을 잠글 수 없다** → preview 배포 + 보호 별칭으로 운용 (M7 트러블슈팅 ①) |
 | **M3.5 전** | **상위에 지수 수집 추가 승인** (V12 ①a) — **M4를 막는다** | ⏳ |
 | **M8 전** | **상위에 공매도 수집 추가 승인** (V6b ①b) — 막지 않는다 | ⏳ |
 
@@ -548,16 +548,22 @@ ksc_bars 안의 지수 행: 0 · 소수점 살아 있음(6687.21 / 813.50)
 > **DESIGN 시안 합의가 선행 조건이다** (워크스페이스 진행 원칙 3). 합의 없이 화면 구현에 착수하지 않는다.
 > 그리고 **여기가 이 프로젝트의 보안 급소**다 (PLAN §4).
 
-- [ ] `🔄` `docs/DESIGN.md` — IA ✅ → 화면별 와이어프레임 ✅ → **Claude Design 캔버스 시안** ✅ 2026-09-06 발행(5 아트보드 · 라이트/다크 · 팔레트 검증기 통과) → **사용자 합의 기록** ⏳
-- [ ] Next.js 16 + TS + Tailwind 뼈대 — **`web/`에서** npm (워크스페이스 루트 오설치 사례 있음)
-- [ ] `lib/db.ts` — **`ksv_reader` 자격증명 · 서버 컴포넌트/라우트 핸들러 전용 · `NEXT_PUBLIC_` 접두어를 쓰지 않는다** · **커넥션 풀러(6543 · transaction mode)** + pool 설정 (M-1 ⑩)
-- [ ] **F51 오늘 화면** — 그날 판정 표 · 정렬·필터(판정·전략·점수)
-- [ ] **F52 종목 화면** — 증거 다섯 갈래를 한 화면에. **공시는 DART 원문 링크 필수** (N3)
-- [ ] **F53 이력 화면** — 날짜·종목으로 과거 판정. **판정 시점의 `rules_version`을 함께** 보여 준다
-- [ ] **F54 분별력 화면** — 분포 비교. **적중률 %를 크게 띄우지 않는다.** 표본 수와 「이것은 예측이 아니다」를 같은 화면에 (R2)
-- [ ] **F41·F42 온디맨드** — `/api/verify` 라우트가 `ksv_requests` INSERT + `repository_dispatch`. **하루 요청 상한 + 동시 1건** (요청마다 LLM 비용이 든다 · R9)
-- [ ] **F55 모든 화면에 「투자 권고가 아닙니다 · 참고용 테스트」 + `noindex`** — SSO가 풀리는 날을 대비한 이중 방어
-- [ ] **확인 2종** — ① 브라우저 번들에 DB 자격증명이 **없음을 실제로 확인**(빌드 산출물 grep) ② **SSO 없이 접근 불가** 확인. `npm run lint` · `npm test` · `npm run build` 통과
+**M7 선행 — 웹이 읽을 표를 배치가 채운다** (2026-09-06 발견: `ksv_evidence`·`ksv_runs` 0행, 서술 미저장)
+- [x] `store.save_evidence`·`save_summaries`·`save_run`·`mark_request` + `judge`/`explain`/`record_run` 이음매 — 저장 실패는 errors로, 판정은 남는다. 테스트 44개 (`test_store_persist`·`test_persist_nodes`) ✅ 2026-09-06
+- [x] 스키마 — `ksv_evidence.bodies/anomaly`·`ksv_verdicts.summary`(alter) · `ksv_reader`가 `ksv_requests`에 INSERT(queued)/UPDATE(failed)만 · 실DB 적용·`--verify` 확인 ✅ 2026-09-06
+- [x] `main --request-id`(--ticker 필수) → `running`→`done`/`failed` + detail(판정 요약) · `verify.yml`이 `client_payload.request_id`를 env로 전달 ✅ 2026-09-06
+- [x] SPEC v0.8 · PLAN v0.4 기록 ✅ 2026-09-06
+
+- [x] `docs/DESIGN.md` — IA → 와이어프레임 → **Claude Design 캔버스 시안**(5 아트보드 · 라이트/다크 · 팔레트 검증기 통과) → **사용자 합의 기록** (§4, 제안안 그대로) ✅ 2026-09-06
+- [x] Next.js 16 + TS + Tailwind 뼈대 — `web/` (next 16.3.1 · pg · vitest) ✅ 2026-09-06 — ⚠ 이번에도 백그라운드 `npm install`이 루트에서 돌아 빈 `node_modules`·`package-lock.json`을 만들었다가 지웠다(트러블슈팅 ②)
+- [x] `lib/db.ts` — `ksv_reader` · `server-only` · `NEXT_PUBLIC_` 없음 · 풀러 6543 · 모듈 스코프 Pool(max 2) · date 파서 끔 · `ssl.rejectUnauthorized=false`(풀러 인증서가 자체 서명 체인) ✅ 2026-09-06 — 권한 탐침(롤백 트랜잭션): 판정 INSERT·증거 DELETE·`ksa_*` SELECT 전부 42501, 요청 INSERT(queued)·UPDATE(failed)만 허용
+- [x] **F51 오늘 화면** — 점수 오름차순 기본 · 판정/전략 필터 칩 · 열 머리 정렬 · 생략 갈래 열 · 빈 날 게이트 상태 ✅ 2026-09-06
+- [x] **F52 종목 화면** — 다섯 갈래 순서 고정·빈 갈래 「생략 — 이유」·DART 링크(컴포넌트 테스트)·관측 5/20/60(미도래 —)·서술/⚠ 서술 생략 ✅ 2026-09-06 — 09-03 판정은 증거 저장 전이라 「이날의 증거가 저장되지 않았다」로 보인다(정상)
+- [x] **F53 이력 화면** — 날짜 목록·종목 검색·`rules_version` 열·판 경계 구분선·도래한 초과수익 ✅ 2026-09-06
+- [x] **F54 분별력 화면** — 사분위 띠+중앙값+n 라벨·불일치 빗금·n<30 「표본 부족」·숫자 표·종목 링크 없음·성과 요약 숫자 없음(소스 전체 금지어 테스트) ✅ 2026-09-06
+- [ ] **F41·F42 온디맨드** — `/api/verify`(INSERT queued → dispatch `verify-ticker` + `request_id` → 실패 시 failed) · 하루 5건 + 동시 1건은 서버가 센다 · 상단 바 패널(스텝퍼·5초 폴링) ✅ 코드 완료 2026-09-06 — **`VERIFY_DISPATCH_TOKEN`(fine-grained PAT · 대상 `krx-signal-verify` 1개 · Contents write, R8)을 사용자가 만들어 Vercel preview 환경변수로 넣어야 「요청 → 1분 내 결과」를 확인할 수 있다** (SPEC §9-5)
+- [x] **F55** 하단 고정 띠 + `metadata.robots noindex` + `X-Robots-Tag` 헤더 ✅ 2026-09-06
+- [x] **확인 2종** — ① `.next/static` grep: `ksv_reader`·`pooler.supabase`·`KSV_READER`·`postgresql://`·비밀번호 값 전부 0건 ② `https://krx-signal-verify-dash.vercel.app` → 302 Vercel 인증(curl) · 프로덕션 도메인은 자리표시 「비공개」 · lint ✅ vitest 79 ✅ build ✅ · 로컬 `next start`로 실DB 4화면+API 응답 확인 ✅ 2026-09-06
 
 **완료 기준** — 시안 합의 기록이 DESIGN.md에 있다 · 번들에 자격증명 없음 확인 · SSO 동작 확인 · 웹 3종 검증 통과
 
@@ -607,7 +613,11 @@ ksc_bars 안의 지수 행: 0 · 소수점 살아 있음(6687.21 / 813.50)
 
 > 여기에 쌓는다. 선행에서 계승한 함정은 아래 「계승한 함정」에 이미 적혀 있으니 되풀이하지 않는다.
 
-(비어 있음 — M0 착수 후 기록)
+| # | 일자 | 증상 | 원인 | 조치 |
+|---|------|------|------|------|
+| ① | 2026-09-06 | **첫 `--prod` 배포 직후 `krx-signal-verify.vercel.app`이 200으로 판정 데이터를 그대로 보였다** (V10 위반) | Hobby 플랜은 프로덕션 도메인에 Vercel Authentication을 못 건다 — API PATCH `deploymentType: all` → 「not available on your plan for production deployments」. 기본값 `all_except_custom_domains`는 preview 배포·별칭만 막는다. **선행 `krx-signal-briefing.vercel.app`·`krx-signal-alerts.vercel.app`도 같은 이유로 공개 상태** | 프로덕션 배포 즉시 제거 → 프로덕션 자리에 자리표시 「비공개」(`scripts/vercel-placeholder`) → 진짜 앱은 preview 배포 + 별칭 `krx-signal-verify-dash.vercel.app`(302 → Vercel 인증) · **프로덕션 배포가 0개면 다음 배포가 프로덕션이 된다**(3회 실측) → `scripts/deploy_web.sh`가 자리표시 확인 → preview 확인 → 별칭 → 302 확인을 강제. SPEC V10 v0.8 정정. **선행 두 프로젝트는 별도 조치 필요(사용자 판단)** |
+| ② | 2026-09-06 | 백그라운드 `npm install`이 `web/`이 아닌 곳에서 돌아 워크스페이스 루트에 빈 `node_modules/`·`package-lock.json`이 생겼다 | 병렬 호출 사이에 셸 cwd가 달랐다 — `cd`가 같은 호출 안에 없었다 | 확인 후 삭제(루트의 옛 `.vite` 캐시도 함께 지워짐). **npm·vercel은 반드시 같은 호출 안에서 절대경로 `cd` 뒤에** |
+| ③ | 2026-09-06 | `vercel deploy`가 **선행 `krx-signal-briefing` 프로젝트로** 프리뷰 배포를 만들었다 | 직전 호출이 그 디렉토리로 `cd`한 상태가 남아 있었다 | 그 배포 제거 · 선행 리포에 생긴 `.vercel/`과 `.gitignore` 한 줄 되돌림(리포 clean 확인). ②와 같은 규칙 |
 
 ### 계승한 함정 (선행에서 값을 치른 것들)
 

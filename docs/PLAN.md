@@ -184,8 +184,8 @@ krx-signal-verify/
 
 | 겹 | 내용 |
 |---|---|
-| ① **Vercel SSO 배포 보호** | 본인 계정 로그인 없이는 페이지 자체가 안 열린다. **끄지 않는다** (V10) |
-| ② **전용 읽기 롤** | `ksv_reader`에 `GRANT SELECT ON ksv_*`만. 폭발 반경이 `ksv_*`로 제한된다 (V9). **`GRANT`만으로는 부족하다** — RLS가 켜져 있으므로 `to ksv_reader` SELECT 정책을 함께 만든다 (SPEC §5). 정책이 없으면 이 롤도 0행을 받는다 |
+| ① **Vercel SSO 배포 보호** | 본인 계정 로그인 없이는 페이지 자체가 안 열린다. **끄지 않는다** (V10). **v0.4**: Hobby 플랜은 프로덕션 도메인을 못 잠근다 → 대시보드는 **preview 배포 + 보호 별칭**(`krx-signal-verify-dash.vercel.app`)으로, 프로덕션 도메인에는 자리표시만. 프로덕션 배포가 0개면 다음 배포가 프로덕션이 되므로 `scripts/deploy_web.sh`가 자리표시 존재 → preview 확인 → 별칭 → 302 확인 순으로 강제한다 |
+| ② **전용 읽기 롤** | `ksv_reader`에 `GRANT SELECT ON ksv_*`. 폭발 반경이 `ksv_*`로 제한된다 (V9). **`GRANT`만으로는 부족하다** — RLS가 켜져 있으므로 `to ksv_reader` SELECT 정책을 함께 만든다 (SPEC §5). 정책이 없으면 이 롤도 0행을 받는다. **예외 하나(v0.4)**: `ksv_requests`에만 INSERT(`with check status='queued'`)·UPDATE(`with check status='failed'`) — 온디맨드 요청을 넣고, dispatch가 실패하면 자기 요청을 접는다. 완료 위조는 못 한다 |
 | ③ **서버 사이드 전용** | 자격증명은 서버 컴포넌트/라우트 핸들러에만. **`NEXT_PUBLIC_` 접두어를 쓰지 않는다** — 브라우저에 키가 나가지 않는다 |
 
 ### 4-1b. 커넥션은 풀러를 거친다
@@ -279,11 +279,11 @@ V9는 PostgREST가 아니라 **Postgres 롤 직결**이다. Vercel 서버리스�
 | 테이블 | 키 | 비고 |
 |---|---|---|
 | `ksv_verdicts` | `(d, ticker, source)` | `source`가 `batch`/`ondemand`. **집계에서는 섞지 않는다** — 궁금해서 넣은 종목은 표본이 편향돼 있다 (F43) |
-| `ksv_evidence` | `(d, ticker)` | 공시·본문·뉴스·수급·재무·공매도 jsonb |
+| `ksv_evidence` | `(d, ticker)` | 공시·본문·이상점수·뉴스·수급·재무·공매도 jsonb + `missing`. `judge`가 판정 **다음에** 저장(v0.4) |
 | `ksv_outcomes` | `(d, ticker)` | 미도래 구간은 `null`, 매일 채운다 |
 | `ksv_discrimination` | `(as_of, horizon, rules_version)` | 분포 요약 |
-| `ksv_runs` | `run_at` | 실패해도 먼저 기록 |
-| `ksv_requests` | `id` | 온디맨드 큐 |
+| `ksv_runs` | `run_at` | 실패해도 먼저 기록. `record_run`이 저장(v0.4 — 그전엔 상태에만 남고 DB엔 안 갔다) |
+| `ksv_requests` | `id` | 온디맨드 큐. 웹 INSERT(`queued`) → 워크플로 `--request-id`로 `running`→`done`/`failed` + `detail`에 판정 요약 |
 
 > **`ksv_*`의 소비자가 하나 더 생길 수 있다** (SPEC V14, 2026-09-02) — MCP 서버가 이 테이블들을
 > **읽기 전용**으로 조회하는 창구가 될 수 있다. 어느 프로젝트에서 만들지는 M3 이후에 정한다.
@@ -391,6 +391,7 @@ V9는 PostgREST가 아니라 **Postgres 롤 직결**이다. Vercel 서버리스�
 
 | 판 | 일자 | 내용 |
 |---|---|---|
+| v0.4 | 2026-09-06 | **M7 선행 반영** — §4-1 ② 읽기 롤의 `ksv_requests` 쓰기 예외 · §6-2 증거·실행기록·서술 저장 이음매(`_save_evidence`·`_save_run`·`_save_summaries`)와 요청 상태 경로. 배경: 두 표가 M3~M6 동안 0행이었다 (SPEC v0.8) |
 | v0.3 | 2026-09-02 | **§4-1 ② 보강**(GRANT만으로는 부족 — RLS 정책이 함께 필요) · **§4-1b 신설**(커넥션 풀러 `6543` transaction 모드 · 모듈 스코프 Pool · prepared statement 비활성) · §7 `test_schema` 검사 항목 정정 (M-1 ①⑩) |
 | v0.2 | 2026-09-02 | **V12 A안 확정 반영** — 상위 수정을 ①a 지수 / ①b 공매도로 가르고, 지수를 **M3.5로 M4 앞에** 세웠다. §6-2에 MCP 소비자 주석(V14) |
 | v0.1 | 2026-08-31 | 초안. SPEC v0.2(V1~V11 전부 확정) 기준. 그림 5장(`arch`·`graph`·`modules`·`outcome`·`web`)을 Graphviz로 작성 |

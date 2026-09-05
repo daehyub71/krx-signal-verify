@@ -92,6 +92,7 @@ mypy                # 2. 타입 체크 (strict — files는 pyproject.toml)
 pytest tests/ -v    # 3. 테스트
 
 cd web && npm run lint && npm test && npm run build   # 웹 (M7 이후)
+scripts/deploy_web.sh                                  # 웹 배포 — preview + 보호 별칭 강제 (V10 v0.8, 프로덕션은 자리표시)
 ```
 
 ## 자격증명
