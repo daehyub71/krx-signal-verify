@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #1f63a8; } a:hover { color: #174f86; }
+    .root { --ground:#eff1f5; --surface:#ffffff; --sunk:#e5e8ef; --raise:#fafbfd; --ink:#121829; --ink-2:#3d465f; --muted:#626d8a; --faint:#8b94ac; --line:#d3d8e4; --line-2:#bfc6d6; --up:#c9283e; --up-w:#fbeaec; --down:#1f63a8; --down-w:#e7f0f9; --agree:#0E8A6E; --conflict:#C9283E; }
+    .root[data-theme="dark"] { --ground:#0d1120; --surface:#151b2c; --sunk:#101626; --raise:#1a2135; --ink:#e4e8f2; --ink-2:#bac3d8; --muted:#8c97b5; --faint:#6b7694; --line:#272f49; --line-2:#38425f; --up:#ff6377; --up-w:#2a1620; --down:#5fa6ec; --down-w:#101f31; --agree:#2A9D85; --conflict:#E0556A; }
+    .root { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--ground); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .agree { background: var(--agree); color: #ffffff; }
+    .conflict { background: var(--conflict); color: #ffffff; }
+    .none { border: 1px solid var(--line-2); color: var(--muted); }
+    .nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; padding: 0 2px; }
+    .nav a.on { color: var(--ink); border-bottom: 2px solid var(--ink); }
+    th { text-align: left; font-weight: 600; font-size: 12px; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 0 12px; height: 40px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+    .filter { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-2); color: var(--ink-2); font-size: 12px; background: var(--surface); }
+    .filter.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  </style>
+</helmet>
+<div class="root" data-theme="{{theme}}" style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="font-weight: 700; font-size: 15px; letter-spacing: -0.01em;">신호 검증</div>
+    <div class="nav" style="display: flex; gap: 20px; font-size: 14px;">
+      <a class="on" href="#">오늘</a><a href="#">이력</a><a href="#">분별력</a>
+    </div>
+    <div style="flex-grow: 1;"></div>
+    <div class="mono" style="font-size: 13px; color: var(--muted);">2026-09-03 (수)</div>
+    <div style="display: flex; gap: 8px;">
+      <div class="mono" style="height: 36px; width: 148px; display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); color: var(--faint); font-size: 13px;">종목코드 6자리</div>
+      <div style="height: 36px; padding: 0 14px; display: flex; align-items: center; border-radius: 6px; background: var(--ink); color: var(--surface); font-size: 13px; font-weight: 600;">검증 요청</div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 24px 32px; display: flex; flex-direction: column; gap: 16px; overflow: hidden;">
+
+    <div style="display: flex; align-items: flex-end; gap: 24px;">
+      <div>
+        <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.01em;">9월 3일 판정 15종목</div>
+        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">상위 신호 15건 · 억제 제외 · 산식 v1.0 · 상위 자료 기준일 2026-09-03</div>
+      </div>
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="chip agree">정합 9</span>
+        <span class="chip conflict">불일치 1</span>
+        <span class="chip none">무관 5</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span style="font-size: 12px; color: var(--muted); margin-right: 4px;">판정</span>
+      <span class="filter on">전체</span><span class="filter">정합</span><span class="filter">불일치</span><span class="filter">무관</span>
+      <span style="width: 1px; height: 20px; background: var(--line-2); margin: 0 8px;"></span>
+      <span style="font-size: 12px; color: var(--muted); margin-right: 4px;">전략</span>
+      <span class="filter on">전체</span><span class="filter">vcp</span><span class="filter">mtf</span>
+      <div style="flex-grow: 1;"></div>
+      <span style="font-size: 12px; color: var(--muted);">정렬 · 점수 낮은 순 (불일치가 위로 온다)</span>
+    </div>
+
+    <div style="background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="width: 200px;">종목</th>
+            <th style="width: 64px;">전략</th>
+            <th style="width: 96px;">판정</th>
+            <th style="width: 72px; text-align: right;">점수 ↑</th>
+            <th>근거 (점수 구성 상위 2개)</th>
+            <th style="width: 120px;">생략 갈래</th>
+            <th style="width: 48px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="font-weight: 600;">금강철강</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">053260</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">mtf</td>
+            <td><span class="chip conflict">불일치</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">37</td>
+            <td style="color: var(--ink-2); font-size: 13px;">위험 유형 노랑 2건 <span class="mono">−8</span> · 30일 기관·외국인 순매도 <span class="mono">−8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">유디엠텍</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">389680</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">vcp</td>
+            <td><span class="chip none">무관</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">51</td>
+            <td style="color: var(--ink-2); font-size: 13px;">30일 기관·외국인 순매수 <span class="mono">+8</span> · 08/19 공시일 순매도 <span class="mono">−6</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">대원강업</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">000430</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">mtf</td>
+            <td><span class="chip none">무관</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">52</td>
+            <td style="color: var(--ink-2); font-size: 13px;">최근 30일 확인된 위험 유형 없음 <span class="mono">+10</span> · 30일 순매도 <span class="mono">−8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">아진엑스텍</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">059120</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">vcp</td>
+            <td><span class="chip none">무관</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">52</td>
+            <td style="color: var(--ink-2); font-size: 13px;">최근 30일 확인된 위험 유형 없음 <span class="mono">+10</span> · 30일 순매도 <span class="mono">−8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">나노팀</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">417010</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">vcp</td>
+            <td><span class="chip none">무관</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">52</td>
+            <td style="color: var(--ink-2); font-size: 13px;">최근 30일 확인된 위험 유형 없음 <span class="mono">+10</span> · 30일 순매도 <span class="mono">−8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">대한해운</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">005880</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">mtf</td>
+            <td><span class="chip agree">정합</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">68</td>
+            <td style="color: var(--ink-2); font-size: 13px;">최근 30일 확인된 위험 유형 없음 <span class="mono">+10</span> · 30일 기관·외국인 순매수 <span class="mono">+8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">팬오션</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">028670</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">mtf</td>
+            <td><span class="chip agree">정합</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">68</td>
+            <td style="color: var(--ink-2); font-size: 13px;">최근 30일 확인된 위험 유형 없음 <span class="mono">+10</span> · 30일 기관·외국인 순매수 <span class="mono">+8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+          <tr>
+            <td><span style="font-weight: 600;">코미팜</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">041960</span></td>
+            <td class="mono" style="font-size: 12px; color: var(--ink-2);">vcp</td>
+            <td><span class="chip agree">정합</span></td>
+            <td class="mono" style="text-align: right; font-weight: 600;">68</td>
+            <td style="color: var(--ink-2); font-size: 13px;">최근 30일 확인된 위험 유형 없음 <span class="mono">+10</span> · 30일 기관·외국인 순매수 <span class="mono">+8</span></td>
+            <td style="font-size: 12px; color: var(--muted);">공매도</td>
+            <td style="color: var(--muted);">→</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding: 10px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); background: var(--raise);">… 7종목 더 · 공매도는 상위 미수집(M8 전)이라 전 종목 생략 표시</div>
+    </div>
+
+    <div style="font-size: 12px; color: var(--muted);">점수는 신호의 근거가 받쳐지는지를 재며, 앞으로의 주가를 말하지 않는다. 자세한 것은 종목 화면.</div>
+  </div>
+
+  <div style="height: 40px; display: flex; align-items: center; justify-content: center; background: var(--sunk); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); letter-spacing: 0.01em;">투자 권고가 아닙니다 · 참고용 테스트</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"테마"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'light' }; }
+}
+</script>
+</body>
+</html>

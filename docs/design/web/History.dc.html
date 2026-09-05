@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #1f63a8; } a:hover { color: #174f86; }
+    .root { --ground:#eff1f5; --surface:#ffffff; --sunk:#e5e8ef; --raise:#fafbfd; --ink:#121829; --ink-2:#3d465f; --muted:#626d8a; --faint:#8b94ac; --line:#d3d8e4; --line-2:#bfc6d6; --up:#c9283e; --up-w:#fbeaec; --down:#1f63a8; --down-w:#e7f0f9; --agree:#0E8A6E; --conflict:#C9283E; }
+    .root[data-theme="dark"] { --ground:#0d1120; --surface:#151b2c; --sunk:#101626; --raise:#1a2135; --ink:#e4e8f2; --ink-2:#bac3d8; --muted:#8c97b5; --faint:#6b7694; --line:#272f49; --line-2:#38425f; --up:#ff6377; --up-w:#2a1620; --down:#5fa6ec; --down-w:#101f31; --agree:#2A9D85; --conflict:#E0556A; }
+    .root { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--ground); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .agree { background: var(--agree); color: #ffffff; }
+    .conflict { background: var(--conflict); color: #ffffff; }
+    .none { border: 1px solid var(--line-2); color: var(--muted); }
+    .nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; }
+    .nav a.on { color: var(--ink); border-bottom: 2px solid var(--ink); }
+    th { text-align: left; font-weight: 600; font-size: 12px; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 0 12px; height: 40px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+    .day { display: flex; justify-content: space-between; align-items: center; height: 36px; padding: 0 12px; border-radius: 6px; font-size: 13px; color: var(--ink-2); }
+    .day.on { background: var(--ink); color: var(--surface); }
+    .day.empty { color: var(--faint); }
+  </style>
+</helmet>
+<div class="root" data-theme="{{theme}}" style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="font-weight: 700; font-size: 15px;">신호 검증</div>
+    <div class="nav" style="display: flex; gap: 20px;"><a href="#">오늘</a><a class="on" href="#">이력</a><a href="#">분별력</a></div>
+    <div style="flex-grow: 1;"></div>
+    <div class="mono" style="height: 36px; width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); color: var(--faint); font-size: 13px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>종목명 또는 코드
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 24px 32px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; overflow: hidden;">
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 12px 6px;">최근 거래일 · 판정 수</div>
+      <div class="day on"><span class="mono">09-03 수</span><span class="mono">15</span></div>
+      <div class="day empty"><span class="mono">09-02 화</span><span>판정 없음</span></div>
+      <div class="day empty"><span class="mono">09-01 월</span><span>판정 없음</span></div>
+      <div class="day empty"><span class="mono">08-29 금</span><span>판정 없음</span></div>
+      <div class="day empty"><span class="mono">08-28 목</span><span>판정 없음</span></div>
+      <div class="day empty"><span class="mono">08-27 수</span><span>판정 없음</span></div>
+      <div class="day empty"><span class="mono">08-26 화</span><span>판정 없음</span></div>
+      <div style="font-size: 12px; color: var(--faint); padding: 8px 12px 0; line-height: 1.5;">소급하지 않는다(V13). 표본은 첫 배치가 돈 날부터 실시간으로만 쌓인다.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+      <div style="display: flex; align-items: flex-end; gap: 16px;">
+        <div style="font-size: 22px; font-weight: 700;">2026년 9월 3일 판정</div>
+        <div class="mono" style="font-size: 13px; color: var(--muted);">산식 v1.0 · 15종목</div>
+        <div style="flex-grow: 1;"></div>
+        <div style="font-size: 12px; color: var(--muted);">판정 시점의 산식 판을 함께 본다 — 판이 다르면 다른 자로 잰 값이다</div>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="width: 104px;">판정일</th>
+              <th style="width: 190px;">종목</th>
+              <th style="width: 96px;">판정</th>
+              <th style="width: 64px; text-align: right;">점수</th>
+              <th style="width: 72px;">산식</th>
+              <th style="width: 88px;">출처</th>
+              <th style="width: 88px; text-align: right;">5일 초과</th>
+              <th style="width: 88px; text-align: right;">20일</th>
+              <th style="width: 88px; text-align: right;">60일</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono" style="color: var(--muted);">2026-09-03</td>
+              <td><span style="font-weight: 600;">금강철강</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">053260</span></td>
+              <td><span class="chip conflict">불일치</span></td>
+              <td class="mono" style="text-align: right; font-weight: 600;">37</td>
+              <td class="mono" style="color: var(--ink-2);">v1.0</td>
+              <td style="font-size: 12px; color: var(--ink-2);">batch</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td style="color: var(--muted);">→</td>
+            </tr>
+            <tr>
+              <td class="mono" style="color: var(--muted);">2026-09-03</td>
+              <td><span style="font-weight: 600;">유디엠텍</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">389680</span></td>
+              <td><span class="chip none">무관</span></td>
+              <td class="mono" style="text-align: right; font-weight: 600;">51</td>
+              <td class="mono" style="color: var(--ink-2);">v1.0</td>
+              <td style="font-size: 12px; color: var(--ink-2);">batch</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td style="color: var(--muted);">→</td>
+            </tr>
+            <tr>
+              <td class="mono" style="color: var(--muted);">2026-09-03</td>
+              <td><span style="font-weight: 600;">대원강업</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">000430</span></td>
+              <td><span class="chip none">무관</span></td>
+              <td class="mono" style="text-align: right; font-weight: 600;">52</td>
+              <td class="mono" style="color: var(--ink-2);">v1.0</td>
+              <td style="font-size: 12px; color: var(--ink-2);">batch</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td style="color: var(--muted);">→</td>
+            </tr>
+            <tr>
+              <td class="mono" style="color: var(--muted);">2026-09-03</td>
+              <td><span style="font-weight: 600;">대한해운</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">005880</span></td>
+              <td><span class="chip agree">정합</span></td>
+              <td class="mono" style="text-align: right; font-weight: 600;">68</td>
+              <td class="mono" style="color: var(--ink-2);">v1.0</td>
+              <td style="font-size: 12px; color: var(--ink-2);">batch</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td style="color: var(--muted);">→</td>
+            </tr>
+            <tr>
+              <td class="mono" style="color: var(--muted);">2026-09-03</td>
+              <td><span style="font-weight: 600;">팬오션</span> <span class="mono" style="color: var(--muted); font-size: 12px; margin-left: 6px;">028670</span></td>
+              <td><span class="chip agree">정합</span></td>
+              <td class="mono" style="text-align: right; font-weight: 600;">68</td>
+              <td class="mono" style="color: var(--ink-2);">v1.0</td>
+              <td style="font-size: 12px; color: var(--ink-2);">batch</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td class="mono" style="text-align: right; color: var(--faint);">—</td>
+              <td style="color: var(--muted);">→</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding: 10px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); background: var(--raise);">… 10종목 더 · 초과수익 — 는 미도래(판정일 09-03에서 5거래일이 아직 지나지 않았다). 지수가 없는 날은 「기준선 미도달」로 적는다.</div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--faint);">
+        <span style="flex-grow: 1; height: 1px; background: var(--line-2);"></span>
+        <span>산식이 바뀌면 여기 구분선이 생긴다 — 「v1.1부터」. 위아래는 서로 다른 자로 잰 값이라 한 줄로 이어 읽지 않는다.</span>
+        <span style="flex-grow: 1; height: 1px; background: var(--line-2);"></span>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 40px; display: flex; align-items: center; justify-content: center; background: var(--sunk); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);">투자 권고가 아닙니다 · 참고용 테스트</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"테마"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'light' }; }
+}
+</script>
+</body>
+</html>

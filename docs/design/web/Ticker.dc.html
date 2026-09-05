@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #1f63a8; } a:hover { color: #174f86; }
+    .root { --ground:#eff1f5; --surface:#ffffff; --sunk:#e5e8ef; --raise:#fafbfd; --ink:#121829; --ink-2:#3d465f; --muted:#626d8a; --faint:#8b94ac; --line:#d3d8e4; --line-2:#bfc6d6; --up:#c9283e; --up-w:#fbeaec; --down:#1f63a8; --down-w:#e7f0f9; --agree:#0E8A6E; --conflict:#C9283E; }
+    .root[data-theme="dark"] { --ground:#0d1120; --surface:#151b2c; --sunk:#101626; --raise:#1a2135; --ink:#e4e8f2; --ink-2:#bac3d8; --muted:#8c97b5; --faint:#6b7694; --line:#272f49; --line-2:#38425f; --up:#ff6377; --up-w:#2a1620; --down:#5fa6ec; --down-w:#101f31; --agree:#2A9D85; --conflict:#E0556A; }
+    .root { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--ground); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .agree { background: var(--agree); color: #ffffff; }
+    .conflict { background: var(--conflict); color: #ffffff; }
+    .none { border: 1px solid var(--line-2); color: var(--muted); }
+    .nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+    .h { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; margin-bottom: 8px; }
+    .lane { display: flex; flex-direction: column; gap: 6px; }
+    .row { display: flex; align-items: baseline; gap: 10px; font-size: 13px; }
+    .skip { color: var(--faint); font-size: 13px; }
+    .ext { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+  </style>
+</helmet>
+<div class="root" data-theme="{{theme}}" style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="font-weight: 700; font-size: 15px;">신호 검증</div>
+    <div class="nav" style="display: flex; gap: 20px;"><a href="#">오늘</a><a href="#">이력</a><a href="#">분별력</a></div>
+    <div style="flex-grow: 1;"></div>
+    <div class="mono" style="font-size: 13px; color: var(--muted);">2026-08-26 (수) · 예시 — 선행 실측 자료</div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 20px 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; overflow: hidden;">
+
+    <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 12px;">
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="font-size: 22px; font-weight: 700;">씨피시스템</div>
+          <div class="mono" style="color: var(--muted);">413630 · KOSDAQ · vcp</div>
+          <div style="flex-grow: 1;"></div>
+          <span class="chip conflict">불일치</span>
+          <div class="mono" style="font-size: 28px; font-weight: 700; line-height: 1;">31</div>
+          <div class="mono" style="font-size: 12px; color: var(--faint);">산식 v1.0 · batch</div>
+        </div>
+        <div style="font-size: 13px; color: var(--ink-2); border-left: 2px solid var(--line-2); padding-left: 10px;">이 점수는 신호의 근거가 받쳐지는지를 재며, 공매도 · 실적·밸류에이션 · 업황 · 시장 전체 흐름을 보지 않는다. 앞으로의 주가를 말하지 않는다.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px;">
+          <span class="mono" style="color: var(--muted);">50</span>
+          <span>위험 유형 빨강 1건 <span class="mono">−8</span></span>
+          <span>잠재 물량 5.10% <span class="mono">−5</span></span>
+          <span>사모 발행 <span class="mono">−3</span></span>
+          <span>08/26 공시일 기관·외국인 순매도 <span class="mono">−6</span></span>
+          <span>공시를 설명하는 뉴스 있음 <span class="mono">+3</span></span>
+        </div>
+      </div>
+
+      <div class="card lane">
+        <div class="h">1 공시 · 30일</div>
+        <div class="row">
+          <span class="mono" style="color: var(--muted); width: 84px;">2026-08-26</span>
+          <span class="chip conflict" style="height: 20px; font-size: 11px;">빨강 · cb</span>
+          <span style="font-weight: 600;">주요사항보고서(전환사채권발행결정)</span>
+          <a class="ext" href="#">DART 원문 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M19 14v6H4V5h6"/></svg></a>
+        </div>
+        <div style="font-size: 13px; color: var(--ink-2); padding-left: 94px;">100억원 · 시설자금 100억 · 사모 · 전환가 5,106원 · 전환 시 1,958,480주 = <b>발행주식의 5.10%</b> · 사모 발행일로부터 1년간 전환 금지</div>
+      </div>
+
+      <div class="card lane">
+        <div class="h">2 뉴스 · 관련도순 · 제목에 종목명</div>
+        <div class="row">
+          <span class="mono" style="color: var(--muted); width: 84px;">2026-08-26</span>
+          <a href="#" style="font-weight: 500;">씨피시스템, 100억 규모 CB 발행…전액 제2공장 투입</a>
+          <span style="color: var(--faint); font-size: 12px;">[매체]</span>
+        </div>
+        <div style="font-size: 13px; color: var(--ink-2); padding-left: 94px;">조달자금은 전액 제2공장 설립에 필요한 시설투자에 사용될 예정이다.</div>
+      </div>
+
+      <div class="card lane">
+        <div class="h">3 수급 · 기관·외국인 순매수 30일 (원)</div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; font-size: 13px;">
+          <div class="row"><span class="mono" style="width: 44px; color: var(--muted);">08/26</span><span style="width: 52px; color: var(--muted);">외국인</span><span style="flex-grow: 1; height: 10px; border-radius: 4px; background: var(--down); max-width: 112px;"></span><span class="mono" style="width: 92px; text-align: right;">−11.26억</span></div>
+          <div class="row"><span class="mono" style="width: 44px; color: var(--muted);">08/26</span><span style="width: 52px; color: var(--muted);">개인</span><span style="flex-grow: 1; height: 10px; border-radius: 4px; background: var(--up); max-width: 113px;"></span><span class="mono" style="width: 92px; text-align: right;">+11.31억</span></div>
+          <div class="row"><span class="mono" style="width: 44px; color: var(--muted);">08/25</span><span style="width: 52px; color: var(--muted);">외국인</span><span style="flex-grow: 1; height: 10px; border-radius: 4px; background: var(--down); max-width: 18px;"></span><span class="mono" style="width: 92px; text-align: right;">[값]</span></div>
+          <div class="row"><span class="mono" style="width: 44px; color: var(--muted);">08/25</span><span style="width: 52px; color: var(--muted);">기관</span><span style="flex-grow: 1; height: 10px; border-radius: 4px; background: var(--up); max-width: 24px;"></span><span class="mono" style="width: 92px; text-align: right;">[값]</span></div>
+        </div>
+        <div style="font-size: 13px; color: var(--ink-2); margin-top: 4px;">31일 누적 외국인 <span class="mono">−5.73억</span> · 기관 <span class="mono">[값]</span> — 공시 당일 외국인이 팔고 개인이 그만큼 받았다</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="card lane">
+        <div class="h">관측 · 판정일 기준 거래일 뒤 (지수 대비)</div>
+        <div style="display: grid; grid-template-columns: 56px repeat(3, minmax(0, 1fr)); gap: 6px 8px; font-size: 13px;">
+          <span></span><span style="color: var(--muted); font-size: 12px;">종목</span><span style="color: var(--muted); font-size: 12px;">KOSDAQ</span><span style="color: var(--muted); font-size: 12px;">초과</span>
+          <span class="mono" style="color: var(--muted);">5일</span><span class="mono">−3.4%</span><span class="mono">+1.2%</span><span class="mono" style="font-weight: 600;">−4.6%p</span>
+          <span class="mono" style="color: var(--muted);">20일</span><span class="mono" style="color: var(--faint);">—</span><span class="mono" style="color: var(--faint);">—</span><span class="mono" style="color: var(--faint);">—</span>
+          <span class="mono" style="color: var(--muted);">60일</span><span class="mono" style="color: var(--faint);">—</span><span class="mono" style="color: var(--faint);">—</span><span class="mono" style="color: var(--faint);">—</span>
+        </div>
+        <div style="font-size: 12px; color: var(--faint);">— 는 아직 오지 않은 구간. 5일 값은 예시. 되돌아보는 값이며 예측이 아니다.</div>
+      </div>
+
+      <div class="card lane">
+        <div class="h">4 재무 · 2026년 반기보고서 기준 (연결)</div>
+        <div class="row" style="justify-content: space-between;"><span>매출액</span><span class="mono">[값]원 (전기 대비 [±%])</span></div>
+        <div class="row" style="justify-content: space-between;"><span>영업이익</span><span class="mono">[값]원 (전기 대비 [±%])</span></div>
+        <div class="row" style="justify-content: space-between;"><span>당기순이익</span><span class="mono">[값]원</span></div>
+        <div class="row" style="justify-content: space-between;"><span>부채비율</span><span class="mono">[값]%</span></div>
+        <div class="row" style="justify-content: space-between;"><span>이익잉여금</span><span class="mono">[값]원</span></div>
+        <div style="font-size: 12px; color: var(--faint);">금융사면 「이 보고서에 매출액이 없다」가 여기 한 줄로 온다</div>
+      </div>
+
+      <div class="card lane">
+        <div class="h">5 공매도 · 20거래일</div>
+        <div class="skip">생략 — 상위가 아직 수집하지 않는다 (M8 전). 자리는 남긴다.</div>
+      </div>
+
+      <div class="card lane" style="flex-grow: 1;">
+        <div class="h">서술 · LLM (예시)</div>
+        <div style="font-size: 13px; color: var(--ink-2);">100억 CB의 자금 용도는 전액 제2공장 시설투자로 뉴스가 뒷받침한다. 다만 전환 시 발행주식의 5.10%가 늘고 사모라 1년간 전환이 막힌다. 공시 당일 외국인이 11.3억을 순매도하고 개인이 그만큼 받았다 — 정배열 전환 신호를 수급이 받치지 않는다.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 40px; display: flex; align-items: center; justify-content: center; background: var(--sunk); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);">투자 권고가 아닙니다 · 참고용 테스트</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"테마"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'light' }; }
+}
+</script>
+</body>
+</html>

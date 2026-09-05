@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #1f63a8; } a:hover { color: #174f86; }
+    .root { --ground:#eff1f5; --surface:#ffffff; --sunk:#e5e8ef; --raise:#fafbfd; --ink:#121829; --ink-2:#3d465f; --muted:#626d8a; --faint:#8b94ac; --line:#d3d8e4; --line-2:#bfc6d6; --up:#c9283e; --up-w:#fbeaec; --down:#1f63a8; --down-w:#e7f0f9; --agree:#0E8A6E; --conflict:#C9283E; }
+    .root[data-theme="dark"] { --ground:#0d1120; --surface:#151b2c; --sunk:#101626; --raise:#1a2135; --ink:#e4e8f2; --ink-2:#bac3d8; --muted:#8c97b5; --faint:#6b7694; --line:#272f49; --line-2:#38425f; --up:#ff6377; --up-w:#2a1620; --down:#5fa6ec; --down-w:#101f31; --agree:#2A9D85; --conflict:#E0556A; }
+    .root { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--ground); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; }
+    .nav a.on { color: var(--ink); border-bottom: 2px solid var(--ink); }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+    .h { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+    .plot { position: relative; height: 112px; margin: 12px 0 4px; }
+    .grid { position: absolute; top: 0; bottom: 20px; width: 1px; background: var(--line); }
+    .zero { position: absolute; top: 0; bottom: 20px; width: 1px; background: var(--line-2); }
+    .tick { position: absolute; bottom: 0; transform: translateX(-50%); font-size: 11px; color: var(--faint); }
+    .band { position: absolute; height: 22px; border-radius: 4px; box-shadow: 0 0 0 2px var(--surface); }
+    .band.agree { background: var(--agree); }
+    .band.conflict { background: repeating-linear-gradient(135deg, var(--conflict) 0 3px, var(--surface) 3px 5px); border: 1px solid var(--conflict); }
+    .med { position: absolute; width: 2px; height: 30px; background: var(--ink); transform: translateX(-50%); border-radius: 1px; }
+    .lab { position: absolute; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+    .lab b { color: var(--ink); font-weight: 600; }
+    .empty { height: 112px; margin: 12px 0 4px; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px dashed var(--line-2); border-radius: 6px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    th { text-align: right; font-weight: 600; font-size: 12px; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    td { padding: 0 12px; height: 36px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+  </style>
+</helmet>
+<div class="root" data-theme="{{theme}}" style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="font-weight: 700; font-size: 15px;">신호 검증</div>
+    <div class="nav" style="display: flex; gap: 20px;"><a href="#">오늘</a><a href="#">이력</a><a class="on" href="#">분별력</a></div>
+    <div style="flex-grow: 1;"></div>
+    <div class="mono" style="font-size: 13px; color: var(--muted);">as_of 2026-09-05 · 산식 v1.0</div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 24px 32px; display: flex; flex-direction: column; gap: 16px; overflow: hidden;">
+
+    <div>
+      <div style="font-size: 24px; font-weight: 700; line-height: 1.3;">이것은 예측이 아니다 — 정합 군과 불일치 군이 갈리는지를 본다</div>
+      <div style="font-size: 13px; color: var(--ink-2); margin-top: 4px; max-width: 980px;">판정일 뒤 5·20·60거래일 초과수익(종목 − 시장 지수, %p)을 두 군으로 나눠 분포만 겹쳐 본다. 종목 하나의 앞날을 말하지 않고, 몇 개가 맞았는지도 세지 않는다. 표본이 30건에 못 미치는 구간은 그리지 않는다.</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 18px; font-size: 12px; color: var(--ink-2);">
+      <span><span class="sw" style="background: var(--agree);"></span>정합 군 — 사분위 띠(q1~q3)</span>
+      <span><span class="sw" style="background: repeating-linear-gradient(135deg, var(--conflict) 0 3px, var(--surface) 3px 5px); border: 1px solid var(--conflict);"></span>불일치 군 — 빗금</span>
+      <span><span class="sw" style="width: 2px; height: 14px; background: var(--ink); border-radius: 1px; vertical-align: -3px;"></span>중앙값</span>
+      <span style="color: var(--faint);">막대 안의 회색 세로선은 0 %p · 색 없이도 빗금과 라벨로 읽힌다</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div class="h">5거래일 뒤</div>
+          <div class="mono" style="font-size: 11px; color: var(--up); font-weight: 600;">예시 값 — 실제 표본 0</div>
+        </div>
+        <div class="plot">
+          <div class="grid" style="left: 0%;"></div><div class="grid" style="left: 25%;"></div><div class="zero" style="left: 50%;"></div><div class="grid" style="left: 75%;"></div><div class="grid" style="left: 100%;"></div>
+          <div class="tick" style="left: 0%;">−10</div><div class="tick" style="left: 25%;">−5</div><div class="tick" style="left: 50%;">0 %p</div><div class="tick" style="left: 75%;">+5</div><div class="tick" style="left: 100%;">+10</div>
+          <div class="band agree" style="top: 14px; left: 41%; width: 28.5%;"></div>
+          <div class="med" style="top: 10px; left: 56%;"></div>
+          <div class="lab" style="top: 42px; left: 41%;">정합 <b>n=41</b> · 중앙 <b class="mono">+1.2</b></div>
+          <div class="band conflict" style="top: 58px; left: 32%; width: 26.5%;"></div>
+          <div class="med" style="top: 54px; left: 45.5%;"></div>
+          <div class="lab" style="top: 86px; left: 32%; top: 84px;">불일치 <b>n=33</b> · 중앙 <b class="mono">−0.9</b></div>
+        </div>
+        <div style="font-size: 12px; color: var(--muted); margin-top: 10px;">겹침 <span class="mono" style="color: var(--ink);">0.62</span> — 1이면 완전히 겹친다(구분 못 한다), 0이면 전혀 안 겹친다</div>
+      </div>
+
+      <div class="card">
+        <div class="h">20거래일 뒤</div>
+        <div class="empty">표본 부족<br><span class="mono" style="font-size: 12px;">정합 n=0 · 불일치 n=0 · 필요 30</span></div>
+        <div style="font-size: 12px; color: var(--muted); margin-top: 10px;">첫 배치 2026-09-03 기준 20거래일은 10월 초에 처음 도래한다</div>
+      </div>
+
+      <div class="card">
+        <div class="h">60거래일 뒤</div>
+        <div class="empty">표본 부족<br><span class="mono" style="font-size: 12px;">정합 n=0 · 불일치 n=0 · 필요 30</span></div>
+        <div style="font-size: 12px; color: var(--muted); margin-top: 10px;">60거래일은 12월에 처음 도래한다 · 하루 15건 안팎이면 30건은 약 3주 뒤부터 쌓인다</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--raise);">
+        <div class="h">숫자 표 — 차트와 같은 값 (차트를 못 보는 경우의 대안)</div>
+        <div class="mono" style="font-size: 12px; color: var(--muted);">단위 %p · 5일 열은 예시 값</div>
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr><th>군 · 구간</th><th>n</th><th>q1</th><th>중앙값</th><th>q3</th><th>겹침</th><th>산식</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sw" style="background: var(--agree);"></span>정합 · 5일</td><td class="mono">41</td><td class="mono">−1.8</td><td class="mono" style="font-weight: 600;">+1.2</td><td class="mono">+3.9</td><td class="mono" rowspan="2" style="vertical-align: middle;">0.62</td><td class="mono" style="color: var(--muted);">v1.0</td></tr>
+          <tr><td><span class="sw" style="background: repeating-linear-gradient(135deg, var(--conflict) 0 3px, var(--surface) 3px 5px); border: 1px solid var(--conflict);"></span>불일치 · 5일</td><td class="mono">33</td><td class="mono">−3.6</td><td class="mono" style="font-weight: 600;">−0.9</td><td class="mono">+1.7</td><td class="mono" style="color: var(--muted);">v1.0</td></tr>
+          <tr><td style="color: var(--muted);">정합 · 20일</td><td class="mono">0</td><td class="mono" style="color: var(--faint);">—</td><td class="mono" style="color: var(--faint);">—</td><td class="mono" style="color: var(--faint);">—</td><td class="mono" rowspan="2" style="vertical-align: middle; color: var(--faint);">—</td><td class="mono" style="color: var(--muted);">v1.0</td></tr>
+          <tr><td style="color: var(--muted);">불일치 · 20일</td><td class="mono">0</td><td class="mono" style="color: var(--faint);">—</td><td class="mono" style="color: var(--faint);">—</td><td class="mono" style="color: var(--faint);">—</td><td class="mono" style="color: var(--muted);">v1.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="font-size: 12px; color: var(--faint);">무관 군은 집계에서 뺀다(근거가 없다는 판정이라 비교 대상이 아니다) · 온디맨드 결과는 넣지 않는다(F43) · 산식이 바뀌면 판마다 따로 집계한다 · 이 화면에서 종목으로 가는 링크는 없다</div>
+  </div>
+
+  <div style="height: 40px; display: flex; align-items: center; justify-content: center; background: var(--sunk); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);">투자 권고가 아닙니다 · 참고용 테스트</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"테마"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'light' }; }
+}
+</script>
+</body>
+</html>

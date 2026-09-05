@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #1f63a8; } a:hover { color: #174f86; }
+    .root { --ground:#eff1f5; --surface:#ffffff; --sunk:#e5e8ef; --raise:#fafbfd; --ink:#121829; --ink-2:#3d465f; --muted:#626d8a; --faint:#8b94ac; --line:#d3d8e4; --line-2:#bfc6d6; --up:#c9283e; --up-w:#fbeaec; --down:#1f63a8; --down-w:#e7f0f9; --agree:#0E8A6E; --conflict:#C9283E; }
+    .root[data-theme="dark"] { --ground:#0d1120; --surface:#151b2c; --sunk:#101626; --raise:#1a2135; --ink:#e4e8f2; --ink-2:#bac3d8; --muted:#8c97b5; --faint:#6b7694; --line:#272f49; --line-2:#38425f; --up:#ff6377; --up-w:#2a1620; --down:#5fa6ec; --down-w:#101f31; --agree:#2A9D85; --conflict:#E0556A; }
+    .root { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--ground); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+    .nav a { color: var(--ink-2); text-decoration: none; font-weight: 500; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+    .h { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+    .btn { height: 36px; padding: 0 16px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .btn.primary { background: var(--ink); color: var(--surface); }
+    .btn.disabled { background: var(--sunk); color: var(--faint); border: 1px solid var(--line); }
+    .input { height: 36px; display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); font-size: 13px; }
+    .step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; position: relative; font-size: 12px; color: var(--faint); text-align: center; }
+    .step .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-2); background: var(--surface); }
+    .step.done { color: var(--ink-2); } .step.done .dot { background: var(--ink); border-color: var(--ink); }
+    .step.now { color: var(--ink); font-weight: 600; } .step.now .dot { border-color: var(--ink); box-shadow: 0 0 0 4px var(--sunk); }
+    .step::before { content: ""; position: absolute; top: 5px; left: -50%; width: 100%; height: 2px; background: var(--line); z-index: -1; }
+    .step:first-child::before { display: none; }
+    .step.done::before, .step.now::before { background: var(--ink); }
+    .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .agree { background: var(--agree); color: #ffffff; }
+    .conflict { background: var(--conflict); color: #ffffff; }
+    .none { border: 1px solid var(--line-2); color: var(--muted); }
+    .mini { display: flex; flex-direction: column; gap: 8px; }
+    .mini .tag { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: none; }
+  </style>
+</helmet>
+<div class="root" data-theme="{{theme}}" style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="font-weight: 700; font-size: 15px;">신호 검증</div>
+    <div class="nav" style="display: flex; gap: 20px;"><a href="#">오늘</a><a href="#">이력</a><a href="#">분별력</a></div>
+    <div style="flex-grow: 1;"></div>
+    <div class="input mono" style="width: 200px; border-color: var(--ink);">005880<span style="color: var(--faint); margin-left: auto; font-size: 11px;">6자리</span></div>
+    <div class="btn disabled">검증 요청</div>
+    <div class="mono" style="font-size: 12px; color: var(--muted); white-space: nowrap;">오늘 남은 요청 <b style="color: var(--ink);">4</b>/5 · 동시 1건</div>
+  </div>
+
+  <div style="flex-grow: 1; padding: 24px 32px; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; overflow: hidden;">
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <div style="font-size: 22px; font-weight: 700;">온디맨드 검증 — 대한해운 <span class="mono" style="color: var(--muted); font-weight: 500;">005880</span></div>
+        <div style="font-size: 13px; color: var(--ink-2); margin-top: 2px;">상단 입력에서 요청하면 이 패널이 열린다. 상단 바는 모든 화면에 있으므로 어디서든 연다.</div>
+      </div>
+
+      <div class="card" style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: flex; padding: 8px 40px 0; position: relative; z-index: 0;">
+          <div class="step done"><div class="dot"></div><div>요청 접수</div><div class="mono" style="font-size: 11px;">10:42:03</div></div>
+          <div class="step done"><div class="dot"></div><div>대기</div><div class="mono" style="font-size: 11px;">깃허브 Actions 깨움</div></div>
+          <div class="step now"><div class="dot"></div><div>처리 중</div><div class="mono" style="font-size: 11px; font-weight: 500;">약 1분 · 경과 0:38</div></div>
+          <div class="step"><div class="dot"></div><div>완료</div><div class="mono" style="font-size: 11px;">→ 종목 화면</div></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--raise); border: 1px solid var(--line); border-radius: 6px; font-size: 13px; color: var(--ink-2);">
+          <span style="display: inline-flex; gap: 3px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ink);"></span><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--line-2);"></span><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--line-2);"></span></span>
+          공시 · 뉴스 · 수급 · 재무 갈래를 모으고 판정을 내는 중이다. 처리 중에는 새 요청을 받지 않는다(동시 1건).
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; font-size: 13px;">
+          <div><div class="h">신호 기준</div><div>오늘 <span class="mono">ksa_signals</span>에 있는 신호만 검증한다. 신호가 없으면 「신호 없음」으로 끝난다.</div></div>
+          <div><div class="h">저장</div><div>결과는 <span class="mono">source = ondemand</span>로 저장되어 이력에는 남고 메일은 보내지 않는다(V8).</div></div>
+          <div><div class="h">집계</div><div>온디맨드 결과는 <b>분별력 집계에 넣지 않는다</b>(F43). 고른 종목이라 군 분포를 흐린다.</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="display: flex; align-items: center; gap: 14px;">
+        <div class="h" style="white-space: nowrap;">한도</div>
+        <div style="font-size: 13px; color: var(--ink-2);">하루 <span class="mono">5</span>건 · 자정(KST) 초기화 · 한도를 다 쓰면 버튼이 비활성되고 「내일 00:00 이후」가 뜬다. 한도는 서버(<span class="mono">/api/verify</span>)가 센다 — 화면 숫자는 표시일 뿐이다.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="h">끝나는 네 가지 모습</div>
+
+      <div class="card mini">
+        <div class="tag">완료</div>
+        <div style="display: flex; align-items: center; gap: 10px;"><span class="chip agree">정합</span><span class="mono" style="font-size: 20px; font-weight: 700;">68</span><span style="color: var(--muted); font-size: 12px;">대한해운 · vcp</span><a href="#" style="margin-left: auto; font-size: 13px; font-weight: 500;">종목 화면 →</a></div>
+        <div style="font-size: 12px; color: var(--muted);">결과 저장 10:43:11 · 이력에 <span class="mono">ondemand</span>로 표시</div>
+      </div>
+
+      <div class="card mini">
+        <div class="tag">신호 없음</div>
+        <div style="font-size: 13px; color: var(--ink-2);">오늘 <b>005880</b>에 신호가 없다. 신호가 없는 종목은 검증 대상이 아니라 근거를 모으지 않는다.</div>
+        <div style="font-size: 12px; color: var(--muted);">한도는 소모한다 (요청은 실행됐다)</div>
+      </div>
+
+      <div class="card mini" style="border-color: var(--conflict);">
+        <div class="tag" style="color: var(--conflict);">실패</div>
+        <div style="font-size: 13px; color: var(--ink-2);">배치가 정상 종료하지 않았다 — <span class="mono">DART 한도 초과(020)</span>. 잠시 뒤 다시 요청할 수 있다.</div>
+        <div style="font-size: 12px; color: var(--muted);">사유는 <span class="mono">errors</span> 첫 항목을 그대로 · 키·URL은 가려서</div>
+      </div>
+
+      <div class="card mini" style="background: var(--sunk);">
+        <div class="tag">한도 초과</div>
+        <div style="font-size: 13px; color: var(--ink-2);">오늘 요청 <span class="mono">5/5</span>를 다 썼다. <span class="mono">내일 00:00</span>(KST) 이후 다시 열린다.</div>
+        <div class="btn disabled" style="align-self: flex-start; height: 30px; font-size: 12px;">검증 요청</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 40px; display: flex; align-items: center; justify-content: center; background: var(--sunk); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);">투자 권고가 아닙니다 · 참고용 테스트</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","section":"테마"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'light' }; }
+}
+</script>
+</body>
+</html>
