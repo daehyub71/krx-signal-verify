@@ -393,3 +393,71 @@ where market = %s and d >= %s
 order by d
 """
 
+# 분포 비교용 표본 (F24·F43). **`source='batch'`만** — 궁금해서 넣은 온디맨드 종목은
+# 표본이 편향돼 있다. 미도래(`null`)는 그대로 넘겨 `discriminate`가 세지 않게 한다.
+Q_DISCRIMINATION = """
+select v.stand, {excess} as excess
+from ksv_verdicts v
+join ksv_outcomes o on o.d = v.d and o.ticker = v.ticker
+where v.source = 'batch' and v.rules_version = %s
+order by v.d, v.ticker
+"""
+
+
+def excess_sql(horizon: int) -> str:
+    """그 구간의 초과수익 식. **지수가 없으면 `null`** — 군이 세지 않는다 (F23b)."""
+    return f"o.h{horizon} - o.h{horizon}_index"
+
+
+def fetch_excess(
+    conn: Queryable, horizon: int, rules_version: str
+) -> list[tuple[str, float | None]]:
+    """분포 비교용 표본 `(stand, 초과수익)` (F24·F43).
+
+    **`source='batch'`만** 본다 — 온디맨드는 궁금해서 넣은 종목이라 표본이 편향돼 있다.
+    미도래는 `None`으로 그대로 넘긴다 — 세는 곳은 `discriminate.summarize` 하나여야 한다.
+    """
+    sql = Q_DISCRIMINATION.format(excess=excess_sql(horizon))
+    return [
+        (str(stand), None if v is None else float(v))
+        for stand, v in conn.execute(sql, (rules_version,)).fetchall()
+    ]
+
+
+DISCRIMINATION_COLUMNS: tuple[str, ...] = (
+    "as_of", "horizon", "rules_version",
+    "n_aligned", "n_conflict", "aligned", "conflict", "overlap",
+)
+
+_DCOLS = ", ".join(DISCRIMINATION_COLUMNS)
+_DKEYS = ("as_of", "horizon", "rules_version")
+_DUPDATES = ", ".join(f"{c} = excluded.{c}" for c in DISCRIMINATION_COLUMNS if c not in _DKEYS)
+
+
+def save_discrimination(rows: Sequence[Mapping[str, Any]], *, conn: Queryable | None = None) -> int:
+    """분포 요약을 저장한다 (F24). `(as_of, horizon, rules_version)`으로 덮어쓴다.
+
+    **판이 다르면 다른 줄이다** — 서로 다른 자로 잰 값을 한 줄에 겹쳐 쓰지 않는다 (F26).
+    """
+    if not rows:
+        return 0
+    if conn is not None:
+        return _write_discrimination(conn, rows)
+    with connect() as own:
+        return _write_discrimination(own, rows)
+
+
+def _write_discrimination(c: Queryable, rows: Sequence[Mapping[str, Any]]) -> int:
+    values = ", ".join(["(" + ", ".join(["%s"] * len(DISCRIMINATION_COLUMNS)) + ")"] * len(rows))
+    sql = (
+        f"insert into ksv_discrimination ({_DCOLS}) values {values} "
+        f"on conflict (as_of, horizon, rules_version) do update set {_DUPDATES}"
+    )
+    params: list[Any] = []
+    for r in rows:
+        for col in DISCRIMINATION_COLUMNS:
+            val = r[col]
+            params.append(json.dumps(val, ensure_ascii=False) if isinstance(val, dict) else val)
+    c.execute(sql, params)
+    return len(rows)
+

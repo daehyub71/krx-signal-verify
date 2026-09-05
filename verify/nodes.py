@@ -27,6 +27,7 @@ from verify import (
     dart,
     dart_fin,
     dart_mcp,
+    discriminate,
     enrich,
     financial,
     flags,
@@ -179,7 +180,6 @@ def collect_lanes(
 _collect_lanes = collect_lanes
 
 STUB_NODES = (
-    "aggregate",
     "explain",
     "render",
     "send_email",
@@ -303,9 +303,29 @@ def _slice(ctx: Mapping[str, Any], sig: SignalRow) -> dict[str, Any]:
 
 
 
+def _discriminate(day: date) -> int:
+    """구간마다 분포를 재고 저장한다 (F24). 커넥션 수명이 여기서 끝난다."""
+    with store.connect() as conn, conn.cursor() as cur:
+        rows = [
+            discriminate.to_row(day, h, verdict.RULES_VERSION,
+                                discriminate.compare(*discriminate.split(
+                                    store.fetch_excess(cur, h, verdict.RULES_VERSION))))
+            for h in st.HORIZONS
+        ]
+        return store.save_discrimination(rows, conn=cur)
+
+
 def aggregate(s: st.VerifyState) -> dict[str, Any]:
-    """군별 초과수익 분포를 집계한다 (M4)."""
-    return {}
+    """정합 군과 불일치 군의 **분포**를 견준다 (F24). 게이트보다 앞에서 돈다.
+
+    **적중률을 내지 않는다** — `discriminate`의 반환 타입에 그 칸이 없다 (V4·R2).
+    표본이 얇으면 수치 대신 「표본 부족 (n=…)」이 담긴다.
+    """
+    try:
+        return {"discrimination": {"rows": _discriminate(s["run_date"])}}
+    except Exception as exc:  # noqa: BLE001 — I/O 노드의 규칙
+        return {"errors": [f"분포 집계 실패: {type(exc).__name__}: {exc}"]}
+
 
 
 def gate_from(run: UpstreamRun | None) -> dict[str, Any]:
