@@ -125,12 +125,29 @@ def test_finalize_sets_status_and_is_the_only_judge() -> None:
     assert nodes.finalize(s)["status"] == state.STATUS_STALE_DATA
 
 
-# ── 스텁 — M0에서는 통과만 한다 ──────────────────────────────────
+# ── 스텁 — 이제 하나도 없다 (M5에서 마지막이 실물이 됐다) ────────
 
 
-@pytest.mark.parametrize("name", sorted(nodes.STUB_NODES))
+def test_there_are_no_stubs_left() -> None:
+    """**M5에서 마지막 스텁(`render`·`send_email`)이 실물이 됐다** (2026-09-05).
+
+    아래 `parametrize` 테스트는 목록이 비면서 **건너뛰기로 사라졌다** —
+    상수 목록을 `parametrize`에 쓰면 비웠을 때 실패가 아니라 소멸이다.
+    그래서 「비어 있음」 자체를 여기서 못 박는다.
+    """
+    assert nodes.STUB_NODES == ()
+
+
+@pytest.mark.parametrize("name", sorted(nodes.STUB_NODES) or ["__none__"])
 def test_stub_nodes_pass_through_without_raising(name: str) -> None:
-    """I/O 노드는 **예외를 밖으로 내지 않는다.** 스텁 단계에서도 그 계약을 지킨다."""
+    """I/O 노드는 **예외를 밖으로 내지 않는다.** 스텁 단계에서도 그 계약을 지킨다.
+
+    목록이 비면 `__none__`으로 한 번 돌아 **건너뛰지 않는다** — 건너뛴 테스트는
+    깨진 테스트보다 눈에 안 띈다.
+    """
+    if name == "__none__":
+        assert nodes.STUB_NODES == ()
+        return
     fn = getattr(nodes, name)
     assert isinstance(fn(st()), dict)
 

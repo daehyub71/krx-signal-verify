@@ -25,6 +25,7 @@ from langgraph.types import Send
 
 from verify import (
     analysis,
+    config,
     corp,
     dart,
     dart_fin,
@@ -37,15 +38,20 @@ from verify import (
     llm,
     mcpc,
     news_mcp,
+    notify,
     outcome,
     shorting,
     store,
     verdict,
 )
+from verify import (
+    render as rendering,
+)
 from verify import state as st
 from verify.models import (
     Evidence,
     RunRecord,
+    SendResult,
     SignalRow,
     UpstreamRun,
     Verdict,
@@ -182,10 +188,7 @@ def collect_lanes(
 # `fetch_one`이 부르는 이음매. 테스트가 갈아 끼운다.
 _collect_lanes = collect_lanes
 
-STUB_NODES = (
-    "render",
-    "send_email",
-)
+STUB_NODES: tuple[str, ...] = ()
 
 
 # ── 라우팅 ───────────────────────────────────────────────────────
@@ -239,6 +242,53 @@ def _status_of(s: st.VerifyState) -> str:
     if send is not None and not send.ok:
         return st.STATUS_FAILED
     return st.STATUS_OK
+
+
+def _send(subject: str, text: str, html: str) -> int:
+    """발송 이음매. 테스트가 갈아 끼운다."""
+    return notify.send(subject, text, html)
+
+
+def _mail_items(s: st.VerifyState) -> list[tuple[Any, Any, Any, str]]:
+    """메일에 실을 것 — 판정이 난 종목만. 순서는 **점수 낮은 것부터**(눈에 먼저 띈다)."""
+    verdicts, summaries = s.get("verdicts") or {}, s.get("summaries") or {}
+    by_ticker = {e.ticker: e for e in s.get("evidence") or []}
+    rows = [
+        (
+            sig,
+            verdicts[sig.ticker],
+            by_ticker.get(sig.ticker) or Evidence(s["run_date"], sig.ticker),
+            summaries.get(sig.ticker, ""),
+        )
+        for sig in s.get("signals") or []
+        if sig.ticker in verdicts
+    ]
+    return sorted(rows, key=lambda r: r[1].score)
+
+
+def render(s: st.VerifyState) -> dict[str, Any]:
+    """메일 본문을 만든다 (F50·N9). **간략하게** — 전문은 웹으로 유도한다."""
+    items = _mail_items(s)
+    url = config.optional("DASHBOARD_URL")
+    return {
+        "subject": rendering.subject(s["run_date"], len(items)),
+        "text": rendering.text(s["run_date"], items, url),
+        "html": rendering.html(s["run_date"], items, url),
+    }
+
+
+def send_email(s: st.VerifyState) -> dict[str, Any]:
+    """메일을 보낸다. **예외를 밖으로 내지 않고 결과를 상태에 적는다** (N11).
+
+    `--dry-run`은 실패가 아니다 — 보내지 않았을 뿐이라 `send`를 남기지 않는다.
+    """
+    if s.get("dry_run"):
+        return {}
+    try:
+        n = _send(s.get("subject", ""), s.get("text", ""), s.get("html", ""))
+    except Exception as exc:  # noqa: BLE001 — 발송 실패가 실행 기록을 데려가면 안 된다
+        return {"send": SendResult(ok=False, reason=f"{type(exc).__name__}: {exc}")}
+    return {"send": SendResult(ok=True, reason=f"{n}명")}
 
 
 def record_run(s: st.VerifyState) -> dict[str, Any]:
@@ -534,11 +584,5 @@ def _explain_input(s: st.VerifyState) -> tuple[list[dict[str, Any]], dict[str, A
 
 
 
-def render(s: st.VerifyState) -> dict[str, Any]:
-    """메일 본문을 만든다 (M5)."""
-    return {}
 
 
-def send_email(s: st.VerifyState) -> dict[str, Any]:
-    """메일을 보낸다 (M5). **예외를 밖으로 내지 않고 결과를 상태에 적는다.**"""
-    return {}

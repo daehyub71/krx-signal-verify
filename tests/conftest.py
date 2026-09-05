@@ -93,4 +93,24 @@ def no_real_database(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(store, "connect", blocked)
     monkeypatch.setattr(nodes, "_save_verdicts", lambda *a, **k: 0)
-    monkeypatch.setattr(nodes, "_fetch_signals", blocked)
+    for name in BLOCKED_SEAMS:
+        monkeypatch.setattr(nodes, name, blocked)
+
+
+# `nodes.py`의 I/O 이음매. **새 이음매를 여기 안 넣으면 테스트가 밖으로 나간다** —
+# `send_email`이 실물이 됐을 때 실제로 SMTP를 열려 했다 (2026-09-05).
+# 아래 `test_every_io_seam_is_blocked`가 목록이 낡으면 깨진다.
+BLOCKED_SEAMS = (
+    "_fetch_signals",
+    "_fill_outcomes",
+    "_discriminate",
+    "_collect_lanes",
+    "_disclosures_of",
+    "_news_of",
+    "_corp_codes",
+    "_upstream",
+    "_financials",
+    "_shorting_state",
+    "_summarize",
+    "_send",
+)

@@ -287,6 +287,9 @@ def test_every_horizon_gets_its_own_row(monkeypatch: pytest.MonkeyPatch) -> None
     from verify import state as st
 
     saved: list[Any] = []
+    # conftest가 모든 이음매를 막아 두므로, 이 안을 보려면 직접 되돌린다.
+    monkeypatch.setattr(nodes, "_discriminate", nodes.__dict__["_discriminate"].__wrapped__
+                        if hasattr(nodes._discriminate, "__wrapped__") else _real_discriminate())
     monkeypatch.setattr(store, "connect", lambda: _FakeCtx())
     monkeypatch.setattr(store, "fetch_excess", lambda cur, h, rv: [])
     def keep(rows: Any, conn: Any = None) -> int:
@@ -307,3 +310,17 @@ class _FakeCtx:
 
     def cursor(self) -> _FakeCtx:
         return self
+
+
+def _real_discriminate() -> Any:
+    """conftest가 막기 전의 `_discriminate`. 소스에서 다시 만든다."""
+    import inspect
+    import textwrap
+
+    from verify import nodes
+
+    src = inspect.getsource(nodes)
+    body = "def _discriminate" + src.split("\ndef _discriminate", 1)[1].split("\ndef ", 1)[0]
+    ns: dict[str, Any] = dict(vars(nodes))
+    exec(textwrap.dedent(body), ns)  # noqa: S102 — 테스트가 원본 함수를 되살리는 자리다
+    return ns["_discriminate"]

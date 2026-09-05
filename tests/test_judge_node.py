@@ -13,13 +13,13 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
 from verify import graph, nodes
 from verify import state as st
-from verify.models import Disclosure, Evidence, SignalRow, VerdictInput
+from verify.models import Disclosure, Evidence, SendResult, SignalRow, VerdictInput
 
 D = date(2026, 9, 5)
 
@@ -131,6 +131,8 @@ def test_the_verdict_is_already_stored_when_explain_dies() -> None:
         "fetch_one": lambda s: {"evidence": [evidence()]},
         "judge": _judge_with(save),
         "explain": explode,
+        # 메일까지 가면 실제 SMTP를 연다 — 이 테스트가 보는 것은 저장 순서뿐이다.
+        "send_email": lambda s: {"send": SendResult(ok=True, reason="1명")},
     })
     out = app.invoke(base_state(), {"recursion_limit": st.RECURSION_LIMIT})
 
@@ -168,10 +170,15 @@ def test_judge_comes_before_explain_in_the_graph() -> None:
     assert "judge -> explain" in dot.replace('"', "")
 
 
-def test_explain_never_changes_the_verdict(saver: Recorder) -> None:
+def test_explain_never_changes_the_verdict(
+    saver: Recorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """LLM은 서술만 한다 — `stand`·`score`를 바꾸지 못한다 (F10)."""
+    from verify import llm
+
+    monkeypatch.setattr(nodes, "_summarize", lambda items: llm.Summary(text='{"items": []}'))
     before = nodes.judge(base_state())["verdicts"]["005930"]
-    after = nodes.explain({**base_state(), "verdicts": {"005930": before}})
+    after = nodes.explain(cast(Any, {**base_state(), "verdicts": {"005930": before}}))
     assert "verdicts" not in after  # explain은 판정 키를 돌려주지 않는다
 
 
