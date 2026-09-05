@@ -226,7 +226,7 @@ def test_judge_node_stays_under_the_line_limit() -> None:
 
 def test_judge_is_no_longer_a_stub() -> None:
     assert "judge" not in nodes.STUB_NODES
-    assert "explain" in nodes.STUB_NODES  # M5에서 실물이 된다
+    assert "explain" not in nodes.STUB_NODES  # M5에서 실물이 됐다 (2026-09-05)
 
 
 # ── 입력 조립은 도메인이 읽을 수 있는 꼴로 ────────────────────────

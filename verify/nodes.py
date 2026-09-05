@@ -13,6 +13,7 @@ PLAN이 정한 순서다: **그래프를 먼저 세우고 노드를 나중에 �
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
@@ -23,6 +24,7 @@ from typing import Any
 from langgraph.types import Send
 
 from verify import (
+    analysis,
     corp,
     dart,
     dart_fin,
@@ -32,6 +34,7 @@ from verify import (
     financial,
     flags,
     lanes,
+    llm,
     mcpc,
     news_mcp,
     outcome,
@@ -180,7 +183,6 @@ def collect_lanes(
 _collect_lanes = collect_lanes
 
 STUB_NODES = (
-    "explain",
     "render",
     "send_email",
 )
@@ -487,9 +489,49 @@ def judge(s: st.VerifyState) -> dict[str, Any]:
     return out
 
 
+def _summarize(items: list[dict[str, Any]]) -> llm.Summary:
+    """LLM 호출 이음매. 테스트가 갈아 끼운다."""
+    return llm.summarize(items)
+
+
 def explain(s: st.VerifyState) -> dict[str, Any]:
-    """근거 서술 (M5). **있으면 좋은 층** — 죽어도 판정은 이미 저장돼 있다."""
-    return {}
+    """근거를 말로 푼다 (F11). **하루 1회 일괄. 있으면 좋은 층이다.**
+
+    판정·점수는 이미 저장됐다 (`judge`). 여기서 나오는 것은 **설명뿐**이고,
+    LLM이 `stand`·`score`를 바꾸지 못한다 (F10).
+
+    검증(`analysis.validate`)을 붙여 **걸린 항목만 버린다** — 다듬지 않는다.
+    경계를 넓히는 쪽이 더 위험하다 (N13).
+    """
+    items, meta = _explain_input(s)
+    if not items:
+        return {"summaries": {}}
+    got = _summarize(items)
+    if got.error:
+        return {"summaries": {}, "summary_error": got.error}
+    try:
+        payload = json.loads(got.text)
+    except ValueError:
+        return {"summaries": {}, "summary_error": f"응답이 JSON이 아니다: {got.text[:120]!r}"}
+    kept, dropped = analysis.validate(payload, list(meta["tickers"]), stands=meta["stands"])
+    return {"summaries": kept, "summary_error": " · ".join(dropped) if dropped else ""}
+
+
+def _explain_input(s: st.VerifyState) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """LLM에 넣을 것과, 검증에 쓸 대조표. **세라고 시키지 않고 세어서 준다.**"""
+    verdicts = s.get("verdicts") or {}
+    by_ticker = {e.ticker: e for e in s.get("evidence") or []}
+    triples = [
+        (sig, verdict_input_for(sig, by_ticker.get(sig.ticker)), verdicts.get(sig.ticker))
+        for sig in s.get("signals") or []
+        if sig.ticker in verdicts
+    ]
+    return (
+        analysis.build_input(triples),
+        {"tickers": [t.ticker for t, _, _ in triples],
+         "stands": {t.ticker: v.stand for t, _, v in triples if v}},
+    )
+
 
 
 def render(s: st.VerifyState) -> dict[str, Any]:
