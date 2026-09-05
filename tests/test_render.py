@@ -314,3 +314,46 @@ def test_the_credential_names_match_the_env_file() -> None:
     declared = {m.group(1) for m in re.finditer(r"^([A-Z][A-Z0-9_]*)=", example, re.M)}
     used = set(re.findall(r'config\.(?:require|optional)\("([A-Z0-9_]+)"', src))
     assert used <= declared, f".env.example에 없는 이름을 쓴다: {used - declared}"
+
+
+def test_ondemand_never_sends_mail(monkeypatch: pytest.MonkeyPatch) -> None:
+    """**온디맨드는 게이트도 메일도 필요 없다** (V8) — 결과는 웹이 보여 준다.
+
+    처음엔 `dry_run`만 봤다. ④ 경로를 쏘기 직전에 알았다 — 종목 하나짜리 「검증 없음」 메일이
+    갈 뻔했다 (2026-09-05).
+    """
+    from verify import nodes
+    from verify import state as st
+
+    sent: list[Any] = []
+
+    def spy(*a: Any) -> int:
+        sent.append(a)
+        return 1
+
+    monkeypatch.setattr(nodes, "_send", spy)
+    out = nodes.send_email(cast(Any, {
+        **a_state(1), "mode": st.MODE_ONDEMAND, "ticker": "005930",
+        "subject": "s", "text": "t", "html": "h",
+    }))
+    assert sent == []
+    assert out.get("send") is None  # 실패도 아니다 — 안 보낸 것뿐이다
+
+
+def test_batch_still_sends(monkeypatch: pytest.MonkeyPatch) -> None:
+    """반대편도 잠근다 — 배치는 보낸다."""
+    from verify import nodes
+    from verify import state as st
+
+    sent: list[Any] = []
+
+    def spy(*a: Any) -> int:
+        sent.append(a)
+        return 2
+
+    monkeypatch.setattr(nodes, "_send", spy)
+    out = nodes.send_email(cast(Any, {
+        **a_state(1), "mode": st.MODE_BATCH, "subject": "s", "text": "t", "html": "h",
+    }))
+    assert len(sent) == 1
+    assert out["send"].ok is True

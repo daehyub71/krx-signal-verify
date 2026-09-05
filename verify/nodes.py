@@ -281,8 +281,9 @@ def send_email(s: st.VerifyState) -> dict[str, Any]:
     """메일을 보낸다. **예외를 밖으로 내지 않고 결과를 상태에 적는다** (N11).
 
     `--dry-run`은 실패가 아니다 — 보내지 않았을 뿐이라 `send`를 남기지 않는다.
+    **온디맨드도 보내지 않는다** (V8) — 결과는 웹이 보여 준다. 종목 하나짜리 메일은 소음이다.
     """
-    if s.get("dry_run"):
+    if s.get("dry_run") or s.get("mode") == st.MODE_ONDEMAND:
         return {}
     try:
         n = _send(s.get("subject", ""), s.get("text", ""), s.get("html", ""))
