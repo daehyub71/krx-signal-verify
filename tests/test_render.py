@@ -298,3 +298,19 @@ def test_the_worst_score_comes_first() -> None:
     }
     got = nodes._mail_items(cast(Any, s))
     assert [r[0].ticker for r in got] == ["000002", "000001"]
+
+
+def test_the_credential_names_match_the_env_file() -> None:
+    """⚠ **`GMAIL_USER`로 잘못 적었다** (2026-09-05). `.env`는 `GMAIL_ADDRESS`다.
+
+    실행했다면 「환경변수 없음」으로 조용히 실패했을 것이고, 그건 발송 실패로만 보인다.
+    `.env.example`이 정본이고, 코드가 그 이름을 쓰는지 여기서 대조한다.
+    """
+    import pathlib
+    import re
+
+    src = pathlib.Path("verify/notify.py").read_text(encoding="utf-8")
+    example = pathlib.Path(".env.example").read_text(encoding="utf-8")
+    declared = {m.group(1) for m in re.finditer(r"^([A-Z][A-Z0-9_]*)=", example, re.M)}
+    used = set(re.findall(r'config\.(?:require|optional)\("([A-Z0-9_]+)"', src))
+    assert used <= declared, f".env.example에 없는 이름을 쓴다: {used - declared}"

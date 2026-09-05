@@ -44,7 +44,7 @@ def send(subject: str, text: str, html: str) -> int:
         RuntimeError: 자격증명·수신자가 없다.
         smtplib.SMTPException · OSError: 인증·연결 실패. **호출 노드가 잡아 상태에 적는다.**
     """
-    sender, password = config.require("GMAIL_USER"), config.require("GMAIL_APP_PASSWORD")
+    sender, password = config.require("GMAIL_ADDRESS"), config.require("GMAIL_APP_PASSWORD")
     to = recipients()
     if not to:
         raise RuntimeError("RECIPIENTS가 비었다")

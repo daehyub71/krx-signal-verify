@@ -168,6 +168,22 @@ def test_a_refusal_can_be_rescued_by_the_fallback() -> None:
     assert "server-side-fallback-2026-07-01" in call["betas"]
 
 
+def test_the_output_shape_is_enforced_not_requested() -> None:
+    """⚠ **프롬프트로 부탁하면 마크다운이 온다.** 2026-09-05 첫 실발송에서 15건 전부
+    「응답이 JSON이 아니다」로 버려져 메일이 「⚠ 서술 생략」으로만 나갔다.
+
+    `output_config.format`이 스키마를 **강제**한다 — `analysis.OUTPUT_SCHEMA` 하나를 쓴다.
+    """
+    from verify import analysis
+
+    client = ok()
+    llm.summarize([{"ticker": "005930"}], client=client)
+    fmt = client.calls[0]["output_config"]["format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["schema"] is analysis.OUTPUT_SCHEMA
+    assert fmt["schema"]["required"] == ["items"]
+
+
 def test_output_is_capped_but_not_starved() -> None:
     """잘리면 마지막 종목의 서술이 통째로 사라진다."""
     client = ok()

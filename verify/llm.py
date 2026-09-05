@@ -83,6 +83,9 @@ def summarize(items: list[dict[str, Any]], *, client: Any = None) -> Summary:
             messages=[{"role": "user", "content": json.dumps(items, ensure_ascii=False)}],
             betas=[FALLBACK_BETA],
             fallbacks="default",
+            # ⚠ **JSON을 부탁하지 않고 강제한다.** 프롬프트만으로는 마크다운 보고서가 왔다 —
+            # 2026-09-05 첫 실발송에서 서술 15건이 전부 「응답이 JSON이 아니다」로 버려졌다.
+            output_config={"format": {"type": "json_schema", "schema": analysis.OUTPUT_SCHEMA}},
         )
     except Exception as exc:  # noqa: BLE001 — 있으면 좋은 층이다 (F34)
         return Summary(error=f"{type(exc).__name__}: {exc}")

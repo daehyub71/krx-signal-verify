@@ -104,8 +104,14 @@ def main(
     status = str(out.get("status", st.STATUS_FAILED))
     for err in out.get("errors", []):
         print(f"⚠ {err}", file=sys.stderr)
+    send = out.get("send")
+    sent = "dry-run" if out.get("dry_run") else (
+        f"보냄({send.reason})" if send and send.ok else f"실패({send.reason})" if send else "안 함"
+    )
+    said = out.get("summary_error") or f"{len(out.get('summaries') or {})}건"
     print(f"status={status} signals={len(out.get('signals', []))} "
-          f"evidence={len(out.get('evidence', []))} outcomes={out.get('outcomes_filled', 0)}")
+          f"evidence={len(out.get('evidence', []))} outcomes={out.get('outcomes_filled', 0)} "
+          f"verdicts={len(out.get('verdicts') or {})} mail={sent} summary={said}")
     return 1 if status in FAILING else 0
 
 
