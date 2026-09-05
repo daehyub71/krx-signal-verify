@@ -39,3 +39,21 @@ def test_every_io_seam_is_blocked() -> None:
     }
     missing = outward - set(BLOCKED_SEAMS)
     assert not missing, f"conftest의 BLOCKED_SEAMS에 없다: {missing}"
+
+
+def test_every_store_save_seam_is_neutralized() -> None:
+    """`_save_x = store.save_x` 꼴의 이음매는 `def`가 아니라 위 검사에 안 잡힌다.
+
+    conftest가 **전부** 0을 돌려주는 대역으로 바꿔야 한다 — 하나라도 빠지면 그래프 테스트가
+    실DB에 쓴다 (2026-09-05에 실제로 두 행을 남겼다).
+    """
+    import inspect
+    import re
+
+    from tests.conftest import SAVE_SEAMS
+    from verify import nodes
+
+    src = inspect.getsource(nodes)
+    assigned = set(re.findall(r"^(_save_\w+) = store\.", src, flags=re.M))
+    diff = assigned ^ set(SAVE_SEAMS)
+    assert not diff, f"conftest SAVE_SEAMS와 다르다: {diff}"

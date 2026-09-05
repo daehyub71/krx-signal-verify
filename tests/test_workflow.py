@@ -198,3 +198,16 @@ def test_the_workflow_carries_every_key_the_code_needs() -> None:
 def test_permissions_are_read_only() -> None:
     """이 워크플로는 리포에 쓰지 않는다 — 결과는 Supabase·메일로 간다 (N15)."""
     assert re.search(r"permissions:\s*\n\s*contents: read", YML)
+
+
+# ── 온디맨드 요청 id — 웹이 client_payload로 보낸다 (M7) ─────────
+
+
+def test_request_id_flows_from_the_payload_to_the_cli() -> None:
+    """`ksv_requests.id`가 워크플로를 거쳐 `--request-id`로 들어간다. 없으면 인자도 없다."""
+    assert "REQUEST_ID: ${{ github.event.client_payload.request_id }}" in YML
+    assert '[ -n "$REQUEST_ID" ] && ARGS="$ARGS --request-id $REQUEST_ID"' in run_block()
+
+
+def test_request_id_is_not_interpolated_into_the_shell() -> None:
+    assert "client_payload.request_id }}" not in run_block()

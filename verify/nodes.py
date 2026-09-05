@@ -72,6 +72,10 @@ TO_REPORT = "report"
 # `gate`가 그랬다: 로컬엔 `.env`가 있어 통과하고 **CI에서만 터졌다** (2026-09-02).
 # I/O 이음매 — 테스트가 갈아 끼운다 (`_sleep`과 같은 꼴).
 _save_verdicts = store.save_verdicts
+# 웹 종목 화면(F52)이 읽는 표들. M3~M6 동안 이음매가 없어 **아무도 쓰지 않았다** (2026-09-06, 0행).
+_save_evidence = store.save_evidence
+_save_summaries = store.save_summaries
+_save_run = store.save_run
 
 
 def _fetch_signals(run_date: date) -> list[SignalRow]:
@@ -296,18 +300,23 @@ def record_run(s: st.VerifyState) -> dict[str, Any]:
     """실행을 기록한다. **여기까지는 무슨 일이 있어도 온다.**
 
     채점(`outcomes_filled`)은 게이트와 무관하게 돌므로, 게이트가 실패한 날에도 함께 남긴다.
+    **DB에도 남긴다** (`ksv_runs`) — 저장이 죽으면 상태의 errors에 적고 기록 자체는 돌려준다.
     """
-    return {
-        "run": RunRecord(
-            run_at=s["run_date"],
-            status=_status_of(s),
-            gate=str(s.get("gate", "")),
-            signals=len(s.get("signals", [])),
-            verdicts=len(s.get("verdicts", {})),
-            outcomes_filled=s.get("outcomes_filled", 0),
-            detail={"errors": list(s.get("errors", []))},
-        )
-    }
+    run = RunRecord(
+        run_at=s["run_date"],
+        status=_status_of(s),
+        gate=str(s.get("gate", "")),
+        signals=len(s.get("signals", [])),
+        verdicts=len(s.get("verdicts", {})),
+        outcomes_filled=s.get("outcomes_filled", 0),
+        detail={"errors": list(s.get("errors", []))},
+    )
+    out: dict[str, Any] = {"run": run}
+    try:
+        _save_run(run)
+    except Exception as exc:  # noqa: BLE001 — 기록 저장이 죽어도 finalize는 가야 한다
+        out["errors"] = [f"실행 기록 저장 실패: {type(exc).__name__}: {exc}"]
+    return out
 
 
 def finalize(s: st.VerifyState) -> dict[str, Any]:
@@ -532,12 +541,30 @@ def judge(s: st.VerifyState) -> dict[str, Any]:
     out: dict[str, Any] = {"verdicts": verdicts}
     if not verdicts:
         return out
+    errors = _persist_judgement(s, verdicts, signals)
+    if errors:
+        out["errors"] = errors
+    return out
+
+
+def _persist_judgement(
+    s: st.VerifyState, verdicts: Mapping[str, Verdict], signals: Sequence[SignalRow]
+) -> list[str]:
+    """판정을 먼저, 증거를 다음에 저장한다. **실패는 문장으로 돌려주고 예외로 내지 않는다.**
+
+    증거는 종목 화면(F52)이 읽는 표다 — 없어도 판정·메일은 나간다 (F34).
+    """
+    errors: list[str] = []
+    mode = s.get("mode") or st.MODE_BATCH
     try:
-        mode = s.get("mode") or st.MODE_BATCH
         _save_verdicts(s["run_date"], verdicts, mode, signals=signals)
     except Exception as exc:  # noqa: BLE001 — 저장 실패가 판정을 데려가면 안 된다
-        out["errors"] = [f"판정 저장 실패: {type(exc).__name__}: {exc}"]
-    return out
+        errors.append(f"판정 저장 실패: {type(exc).__name__}: {exc}")
+    try:
+        _save_evidence(list(s.get("evidence") or []))
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"증거 저장 실패: {type(exc).__name__}: {exc}")
+    return errors
 
 
 def _summarize(items: list[dict[str, Any]]) -> llm.Summary:
@@ -565,7 +592,14 @@ def explain(s: st.VerifyState) -> dict[str, Any]:
     except ValueError:
         return {"summaries": {}, "summary_error": f"응답이 JSON이 아니다: {got.text[:120]!r}"}
     kept, dropped = analysis.validate(payload, list(meta["tickers"]), stands=meta["stands"])
-    return {"summaries": kept, "summary_error": " · ".join(dropped) if dropped else ""}
+    out: dict[str, Any] = {"summaries": kept,
+                           "summary_error": " · ".join(dropped) if dropped else ""}
+    # 걸러진 서술만 판정 행에 붙인다 — 종목 화면(F52)이 읽는다. 저장 실패는 서술을 데려가지 않는다.
+    try:
+        _save_summaries(s["run_date"], kept, s.get("mode") or st.MODE_BATCH)
+    except Exception as exc:  # noqa: BLE001
+        out["errors"] = [f"서술 저장 실패: {type(exc).__name__}: {exc}"]
+    return out
 
 
 def _explain_input(s: st.VerifyState) -> tuple[list[dict[str, Any]], dict[str, Any]]:

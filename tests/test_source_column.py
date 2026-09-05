@@ -107,6 +107,7 @@ def test_the_node_passes_its_mode_through(mode: str) -> None:
 
     from verify import nodes
 
-    src = inspect.getsource(nodes.judge)
+    # 저장 호출은 `judge`가 `_persist_judgement`로 뽑아 쓴다 (M7 선행) — 그쪽을 본다.
+    src = inspect.getsource(nodes._persist_judgement)
     assert 'mode = s.get("mode") or st.MODE_BATCH' in src
     assert "signals=signals" in src

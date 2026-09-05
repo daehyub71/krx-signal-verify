@@ -177,3 +177,80 @@ def test_force_overrides_the_noop() -> None:
     )
     assert code == 0
     assert ran == [1], "--force인데 no-op으로 빠져나갔다"
+
+
+# ── --request-id — 온디맨드 요청 표의 상태를 갱신한다 (F41·V8) ───
+
+
+class Marker:
+    def __init__(self, boom: Exception | None = None) -> None:
+        self.calls: list[tuple[int, str, Any]] = []
+        self.boom = boom
+
+    def __call__(self, request_id: int, status: str, **kw: Any) -> None:
+        self.calls.append((request_id, status, kw))
+        if self.boom:
+            raise self.boom
+
+
+def test_request_id_is_parsed_as_an_integer() -> None:
+    assert m.parse_args(["--ticker", "005880", "--request-id", "7"]).request_id == 7
+
+
+def test_request_id_without_a_ticker_is_rejected() -> None:
+    """요청 표는 온디맨드 전용이다 — 배치가 요청 행을 갱신할 일이 없다."""
+    with pytest.raises(SystemExit):
+        m.parse_args(["--request-id", "7"])
+
+
+@pytest.mark.parametrize("bad", ["x", "1.5", "-1", "0"])
+def test_malformed_request_id_is_rejected(bad: str) -> None:
+    with pytest.raises(SystemExit):
+        m.parse_args(["--ticker", "005880", "--request-id", bad])
+
+
+def test_request_is_marked_running_then_done() -> None:
+    marker = Marker()
+    code = m.main(["--ticker", "005880", "--request-id", "7", "--date", "20260905"],
+                  overrides=wired(), request_marker=marker)
+    assert code == 0
+    assert [(i, s) for i, s, _ in marker.calls] == [(7, "running"), (7, "done")]
+    _, _, kw = marker.calls[1]
+    assert kw["result_d"] == date(2026, 9, 5)
+    assert kw["detail"]["status"] == st.STATUS_OK
+
+
+def test_request_is_marked_failed_when_the_run_fails() -> None:
+    marker = Marker()
+    code = m.main(["--ticker", "005880", "--request-id", "7"],
+                  overrides=wired(send_email=sent_fail), request_marker=marker)
+    assert code == 1
+    assert marker.calls[-1][1] == "failed"
+    assert "errors" in marker.calls[-1][2]["detail"]
+
+
+def test_request_done_detail_carries_the_verdict_if_any() -> None:
+    """웹의 상태 패널이 「정합 68」을 바로 보인다 — 종목 화면까지 안 가도."""
+    marker = Marker()
+    m.main(["--ticker", "005880", "--request-id", "7"], overrides=wired(), request_marker=marker)
+    detail = marker.calls[-1][2]["detail"]
+    assert "verdicts" in detail
+
+
+def test_a_dead_marker_does_not_kill_the_run() -> None:
+    """요청 표 갱신은 부수 기록이다 — 그것이 죽어 검증까지 죽으면 안 된다."""
+    code = m.main(["--ticker", "005880", "--request-id", "7"],
+                  overrides=wired(), request_marker=Marker(RuntimeError("죽음")))
+    assert code == 0
+
+
+def test_no_request_id_never_touches_the_marker() -> None:
+    marker = Marker()
+    m.main(["--ticker", "005880"], overrides=wired(), request_marker=marker)
+    assert marker.calls == []
+
+
+def test_the_default_marker_is_the_real_one() -> None:
+    import inspect
+
+    assert "store.mark_request(" in inspect.getsource(m._mark_request)

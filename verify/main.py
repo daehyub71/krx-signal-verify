@@ -46,6 +46,12 @@ def _as_ticker(raw: str) -> str:
     return raw
 
 
+def _as_request_id(raw: str) -> int:
+    if not raw.isdigit() or int(raw) <= 0:
+        raise argparse.ArgumentTypeError(f"요청 id는 양의 정수여야 한다: {raw!r}")
+    return int(raw)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """CLI 인자를 읽는다. 기준일 기본값은 **서울 기준 오늘**이다 (UTC면 아침에 하루 밀린다)."""
     p = argparse.ArgumentParser(prog="verify", description="차트 신호를 증거로 검증한다")
@@ -58,7 +64,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--force", action="store_true", help="이미 있어도 다시 만든다")
     p.add_argument("--if-not-verified", action="store_true",
                    help="예비 cron용 — 오늘 이미 돌았으면 아무것도 하지 않는다")
-    return p.parse_args(argv)
+    p.add_argument("--request-id", type=_as_request_id, default=None,
+                   help="온디맨드 요청 표(ksv_requests)의 id — running→done/failed로 갱신")
+    args = p.parse_args(argv)
+    if args.request_id is not None and not args.ticker:
+        p.error("--request-id는 --ticker와 함께 써야 한다 (요청 표는 온디맨드 전용)")
+    return args
 
 
 def initial_state(args: argparse.Namespace) -> st.VerifyState:
@@ -87,11 +98,29 @@ def _already_verified(run_date: date) -> bool:
         return bool(store.fetch_verdicts(cur, run_date))
 
 
+def _mark_request(request_id: int, status: str, **kw: Any) -> None:
+    """요청 표 갱신의 실물 (F41). main은 그래프 밖이라 여기서만 DB를 안다."""
+    from verify import store
+
+    store.mark_request(request_id, status, **kw)
+
+
+def _request_detail(out: Mapping[str, Any], status: str) -> dict[str, Any]:
+    """웹 상태 패널이 바로 보일 것 — 판정·점수·오류. 종목 화면까지 안 가도 「정합 68」이 보인다."""
+    verdicts = out.get("verdicts") or {}
+    return {
+        "status": status,
+        "verdicts": {t: {"stand": v.stand, "score": v.score} for t, v in verdicts.items()},
+        "errors": list(out.get("errors") or []),
+    }
+
+
 def main(
     argv: list[str] | None = None,
     *,
     overrides: Mapping[str, Callable[..., dict[str, Any]]] | None = None,
     verified_check: Callable[[date], bool] | None = None,
+    request_marker: Callable[..., None] | None = None,
 ) -> int:
     """한 번 돌리고 종료 코드를 돌려준다.
 
@@ -99,6 +128,7 @@ def main(
         argv: CLI 인자. None이면 `sys.argv`.
         overrides: 노드 대체 (테스트용).
         verified_check: 그날 이미 돌았는지 묻는다. M0에서는 주입으로만 쓴다.
+        request_marker: 온디맨드 요청 표 갱신. 없으면 실물(`_mark_request`).
 
     Returns:
         0(정상) 또는 1(실패). **부분 성공을 성공으로 위장하지 않는다.**
@@ -113,10 +143,24 @@ def main(
         print(f"{args.run_date}는 이미 검증했다 — 아무것도 하지 않는다")
         return 0
 
+    mark = request_marker or _mark_request
+
+    def note(status: str, **kw: Any) -> None:
+        # 요청 표 갱신은 부수 기록이다 — 죽어도 검증을 데려가지 않는다.
+        if args.request_id is None:
+            return
+        try:
+            mark(args.request_id, status, **kw)
+        except Exception as exc:  # noqa: BLE001
+            print(f"⚠ 요청 {args.request_id} 상태 갱신 실패({status}): {exc}", file=sys.stderr)
+
+    note("running")
     app = graph.build_graph(overrides)
     out = app.invoke(initial_state(args), {"recursion_limit": st.RECURSION_LIMIT})
 
     status = str(out.get("status", st.STATUS_FAILED))
+    note("failed" if status in FAILING else "done",
+         result_d=args.run_date, detail=_request_detail(out, status))
     for err in out.get("errors", []):
         print(f"⚠ {err}", file=sys.stderr)
     send = out.get("send")

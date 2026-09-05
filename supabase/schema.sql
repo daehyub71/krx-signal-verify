@@ -161,7 +161,11 @@ create index if not exists ksv_requests_status on ksv_requests (status, requeste
 -- 정의만 고치면 새 DB에서만 반영되고 운영 DB는 조용히 그대로 남는다.
 -- 열을 늘릴 때는 여기에 `alter table ... add column if not exists`를 반드시 한 줄 더한다.
 --
--- (아직 없음 — 첫 판이다)
+-- 2026-09-06 (M7 선행): 증거 표에 본문·이상 점수 열, 판정 표에 LLM 서술 열을 더한다.
+-- 웹 종목 화면(F52)이 다섯 갈래와 서술을 읽는다. 배치가 이전엔 이 표들을 쓰지 않았다.
+alter table ksv_evidence add column if not exists bodies  jsonb;
+alter table ksv_evidence add column if not exists anomaly jsonb;
+alter table ksv_verdicts add column if not exists summary text;
 
 -- ─────────────────────────────────────────────
 -- RLS — 켜고, anon은 막고, ksv_reader만 읽는다
@@ -199,3 +203,17 @@ create policy ksv_outcomes_reader       on ksv_outcomes       for select to ksv_
 create policy ksv_discrimination_reader on ksv_discrimination for select to ksv_reader using (true);
 create policy ksv_runs_reader           on ksv_runs           for select to ksv_reader using (true);
 create policy ksv_requests_reader       on ksv_requests       for select to ksv_reader using (true);
+
+-- ── 온디맨드 요청 표만 웹이 쓴다 (F41·V8) ─────
+-- 읽기 롤의 유일한 쓰기다. INSERT는 `queued`로만, UPDATE는 `failed`로만(dispatch 실패 시 자기 요청을 접는다).
+-- `running`·`done`·`result_d`는 워크플로(service_role)가 쓴다 — 웹이 완료를 위조할 길이 없다.
+grant insert, update on ksv_requests to ksv_reader;
+grant usage, select on sequence ksv_requests_id_seq to ksv_reader;
+
+drop policy if exists ksv_requests_reader_queue on ksv_requests;
+drop policy if exists ksv_requests_reader_fail  on ksv_requests;
+
+create policy ksv_requests_reader_queue on ksv_requests
+  for insert to ksv_reader with check (status = 'queued');
+create policy ksv_requests_reader_fail on ksv_requests
+  for update to ksv_reader using (true) with check (status = 'failed');

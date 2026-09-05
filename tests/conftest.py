@@ -92,7 +92,8 @@ def no_real_database(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
     monkeypatch.setattr(store, "connect", blocked)
-    monkeypatch.setattr(nodes, "_save_verdicts", lambda *a, **k: 0)
+    for name in SAVE_SEAMS:
+        monkeypatch.setattr(nodes, name, lambda *a, **k: 0)
     for name in BLOCKED_SEAMS:
         monkeypatch.setattr(nodes, name, blocked)
 
@@ -100,6 +101,11 @@ def no_real_database(monkeypatch: pytest.MonkeyPatch) -> None:
 # `nodes.py`의 I/O 이음매. **새 이음매를 여기 안 넣으면 테스트가 밖으로 나간다** —
 # `send_email`이 실물이 됐을 때 실제로 SMTP를 열려 했다 (2026-09-05).
 # 아래 `test_every_io_seam_is_blocked`가 목록이 낡으면 깨진다.
+# `_save_x = store.save_x` 꼴의 저장 이음매. **0을 돌려주는 대역**으로 바꾼다 — 막아서 터뜨리면
+# 노드가 그것을 저장 실패로 삼켜 errors만 늘어난다.
+# `test_every_store_save_seam_is_neutralized`가 목록을 nodes.py와 대조한다.
+SAVE_SEAMS = ("_save_verdicts", "_save_evidence", "_save_summaries", "_save_run")
+
 BLOCKED_SEAMS = (
     "_fetch_signals",
     "_fill_outcomes",

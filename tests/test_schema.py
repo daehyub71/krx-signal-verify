@@ -28,7 +28,8 @@ TABLES = (
 def statements() -> list[str]:
     """주석을 걷어낸 문장들. 주석 안의 `to anon`을 오탐하지 않는다."""
     body = re.sub(r"--[^\n]*", "", SQL)
-    return [s.strip().lower() for s in body.split(";") if s.strip()]
+    # 줄바꿈으로 갈린 문장도 한 줄로 본다 — `on ksv_requests\n  for insert`가 대조에서 새지 않게.
+    return [" ".join(s.split()).lower() for s in body.split(";") if s.strip()]
 
 
 def test_all_six_tables_are_created() -> None:
@@ -60,10 +61,40 @@ def test_every_table_has_a_reader_select_policy() -> None:
         assert got, f"{t}에 ksv_reader SELECT 정책이 없다 — 대시보드가 0행을 받는다"
 
 
-def test_reader_policies_are_select_only() -> None:
+def test_reader_policies_are_select_only_except_requests() -> None:
+    """읽기 롤이 쓸 수 있는 곳은 **온디맨드 요청 표 하나**다 (F41 — 웹이 넣고 워크플로가 가져간다).
+
+    판정·증거·사후주가·분별력·실행기록은 어떤 형태로도 쓰지 못한다.
+    """
     for s in statements():
-        if s.startswith("create policy") and "ksv_reader" in s:
+        if s.startswith("create policy") and "ksv_reader" in s and " on ksv_requests " not in s:
             assert "for select" in s, f"읽기 롤에 SELECT 아닌 정책이 있다: {s[:80]}"
+
+
+def test_reader_may_only_queue_or_fail_a_request() -> None:
+    """요청 표 쓰기는 두 문장뿐 — INSERT는 `queued`로만, UPDATE는 `failed`로만.
+
+    `done`·`result_d`는 워크플로(service_role)가 쓴다. 웹이 완료를 위조할 길을 두지 않는다.
+    """
+    writes = [
+        s for s in statements()
+        if s.startswith("create policy") and " on ksv_requests " in s
+        and "ksv_reader" in s and "for select" not in s
+    ]
+    kinds = sorted(s.split(" for ")[1].split(" ")[0] for s in writes)
+    assert kinds == ["insert", "update"], kinds
+    for s in writes:
+        if " for insert " in s:
+            assert "with check (status = 'queued')" in s, s[:120]
+        if " for update " in s:
+            assert "with check (status = 'failed')" in s, s[:120]
+
+
+def test_reader_write_grants_are_limited_to_requests() -> None:
+    """`grant insert/update`가 다른 표로 새지 않는다. 시퀀스는 `id` 채번에 필요하다."""
+    for s in statements():
+        if s.startswith("grant") and "ksv_reader" in s and ("insert" in s or "update" in s):
+            assert " on ksv_requests " in s or "ksv_requests_id_seq" in s, s[:120]
 
 
 def test_role_statements_carry_no_password() -> None:

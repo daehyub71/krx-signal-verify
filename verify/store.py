@@ -17,15 +17,24 @@ Supabase REST는 **1000행에서 조용히 잘린다** — `limit(2000)`을 줘�
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Mapping, Sequence
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Protocol
 
 import psycopg
 
 from verify import config
-from verify.models import Outcome, SignalRow, UpstreamRun, Verdict, VerdictPart
+from verify.models import (
+    Evidence,
+    Outcome,
+    RunRecord,
+    SignalRow,
+    UpstreamRun,
+    Verdict,
+    VerdictPart,
+)
 
 
 def connect() -> psycopg.Connection[Any]:
@@ -460,4 +469,173 @@ def _write_discrimination(c: Queryable, rows: Sequence[Mapping[str, Any]]) -> in
             params.append(json.dumps(val, ensure_ascii=False) if isinstance(val, dict) else val)
     c.execute(sql, params)
     return len(rows)
+
+
+# ── 증거 · 서술 · 실행 기록 · 요청 상태 (M7 선행) ────────────────────
+#
+# M3~M6 동안 `ksv_evidence`·`ksv_runs`는 스키마만 있고 **아무도 쓰지 않았다**
+# (2026-09-06 확인, 둘 다 0행). 웹 종목 화면(F52)이 읽을 표라 여기서 채운다.
+# 저장은 전부 「있으면 좋은 층」이다 — 실패해도 판정은 남는다.
+
+EVIDENCE_COLUMNS: tuple[str, ...] = (
+    "d", "ticker", "disclosures", "news", "flows", "financial", "shorting",
+    "bodies", "anomaly", "missing",
+)
+_ECOLS = ", ".join(EVIDENCE_COLUMNS)
+_EKEYS = ("d", "ticker")
+_EUPDATES = ", ".join(f"{c} = excluded.{c}" for c in EVIDENCE_COLUMNS if c not in _EKEYS)
+
+# 워크플로가 요청 표에 쓸 수 있는 상태. `queued`는 웹만 쓴다 — 되돌리는 길을 두지 않는다.
+REQUEST_STATES = ("running", "done", "failed")
+
+
+def jsonable(obj: Any) -> Any:
+    """dataclass·date·tuple을 **JSON이 받는 꼴**로 내린다.
+
+    증거 갈래는 전부 frozen dataclass라 `json.dumps`가 그대로는 터진다 — 한 종목의 증거가
+    통째로 빠지는 길이다. 모르는 객체는 `str()`로 남긴다: 잃는 것보다 낫다.
+    """
+    if obj is None or isinstance(obj, (bool, int, float, str)):
+        return obj
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return {f.name: jsonable(getattr(obj, f.name)) for f in dataclasses.fields(obj)}
+    if isinstance(obj, Mapping):
+        return {str(k): jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set, frozenset)):
+        return [jsonable(v) for v in obj]
+    return str(obj)
+
+
+def _lane_json(value: Any) -> str | None:
+    """갈래 하나 → jsonb 문자열. **없는 갈래는 null** — 빈 배열은 「봤는데 없었다」로 읽힌다."""
+    return None if value is None else json.dumps(jsonable(value), ensure_ascii=False)
+
+
+def evidence_row(e: Evidence) -> dict[str, Any]:
+    """증거 하나 → 저장 행. 키 순서가 `EVIDENCE_COLUMNS`와 같다."""
+    return {
+        "d": e.d,
+        "ticker": e.ticker,
+        "disclosures": _lane_json(e.disclosures),
+        "news": _lane_json(e.news),
+        "flows": _lane_json(e.flows),
+        "financial": _lane_json(e.financial),
+        "shorting": _lane_json(e.shorting),
+        "bodies": _lane_json(e.bodies),
+        "anomaly": _lane_json(e.anomaly),
+        "missing": list(e.missing_lanes()),
+    }
+
+
+def save_evidence(evidence: Sequence[Evidence], *, conn: Queryable | None = None) -> int:
+    """그날 증거를 `ksv_evidence`에 남긴다. PK `(d, ticker)`로 덮어쓴다.
+
+    온디맨드는 `source`가 없는 이 표에서 그날 배치 증거를 덮는다 — 같은 원천을 더 늦게 본 것이라
+    문제없다. 판정(`ksv_verdicts`)은 `source`로 갈려 있어 서로 덮지 않는다 (F43).
+    """
+    rows = [evidence_row(e) for e in evidence]
+    if not rows:
+        return 0
+    if conn is not None:
+        return _write_evidence(conn, rows)
+    with connect() as own:
+        return _write_evidence(own, rows)
+
+
+def _write_evidence(c: Queryable, rows: Sequence[dict[str, Any]]) -> int:
+    done = 0
+    for i in range(0, len(rows), CHUNK_ROWS):
+        chunk = rows[i : i + CHUNK_ROWS]
+        values = ", ".join(["(" + ", ".join(["%s"] * len(EVIDENCE_COLUMNS)) + ")"] * len(chunk))
+        sql = (f"insert into ksv_evidence ({_ECOLS}) values {values} "
+               f"on conflict (d, ticker) do update set {_EUPDATES}")
+        try:
+            c.execute(sql, [x[col] for x in chunk for col in EVIDENCE_COLUMNS])
+        except Exception as exc:
+            raise RuntimeError(
+                f"증거 저장이 {done}행까지 가고 멈췄다 ({len(rows)}행 중): {exc}"
+            ) from exc
+        done += len(chunk)
+    return done
+
+
+Q_SUMMARY = ("update ksv_verdicts set summary = %s "
+             "where d = %s and ticker = %s and source = %s")
+
+
+def save_summaries(
+    run_date: date, summaries: Mapping[str, str], source: str, *, conn: Queryable | None = None
+) -> int:
+    """LLM 서술을 판정 행에 붙인다 (F11). **판정이 먼저 저장돼 있어야** 붙는 자리가 있다.
+
+    `analysis.validate`를 통과한 것만 받는다 — 버린 서술은 저장하지 않는다.
+    """
+    if not summaries:
+        return 0
+    if conn is not None:
+        return _write_summaries(conn, run_date, summaries, source)
+    with connect() as own:
+        return _write_summaries(own, run_date, summaries, source)
+
+
+def _write_summaries(
+    c: Queryable, run_date: date, summaries: Mapping[str, str], source: str
+) -> int:
+    for ticker, text in summaries.items():
+        c.execute(Q_SUMMARY, (text, run_date, ticker, source))
+    return len(summaries)
+
+
+Q_RUN = ("insert into ksv_runs "
+         "(run_date, status, gate, signals, verdicts, outcomes_filled, detail) "
+         "values (%s, %s, %s, %s, %s, %s, %s)")
+
+
+def save_run(run: RunRecord, *, conn: Queryable | None = None) -> int:
+    """실행 기록을 `ksv_runs`에 남긴다. `run_at`은 DB 기본값(now()) — 두 번 돈 날도 안 겹친다.
+
+    Args:
+        run: 기록. `run_at` 필드는 이름과 달리 **기준일**이라 `run_date` 열에 들어간다.
+        conn: 커넥션 (테스트가 대역을 넣는다).
+    """
+    params = (run.run_at, run.status, run.gate, run.signals, run.verdicts, run.outcomes_filled,
+              json.dumps(jsonable(run.detail), ensure_ascii=False))
+    if conn is not None:
+        conn.execute(Q_RUN, params)
+        return 1
+    with connect() as own:
+        own.execute(Q_RUN, params)
+    return 1
+
+
+Q_REQUEST = "update ksv_requests set status = %s, result_d = %s, detail = %s where id = %s"
+
+
+def mark_request(
+    request_id: int,
+    status: str,
+    *,
+    result_d: date | None = None,
+    detail: Mapping[str, Any] | None = None,
+    conn: Queryable | None = None,
+) -> int:
+    """온디맨드 요청의 상태를 갱신한다 (F41·V8).
+
+    웹이 `queued`로 넣고, 워크플로가 여기서 `running`→`done`/`failed`로 옮긴다.
+
+    Raises:
+        ValueError: `REQUEST_STATES` 밖의 상태. `queued`로 되돌리는 길을 코드가 열지 않는다 —
+            웹의 INSERT 정책(`with check (status = 'queued')`)과 짝이다.
+    """
+    if status not in REQUEST_STATES:
+        raise ValueError(f"요청 상태가 아니다: {status!r} (가능: {REQUEST_STATES})")
+    params = (status, result_d, json.dumps(jsonable(detail or {}), ensure_ascii=False), request_id)
+    if conn is not None:
+        conn.execute(Q_REQUEST, params)
+        return 1
+    with connect() as own:
+        own.execute(Q_REQUEST, params)
+    return 1
 

@@ -85,6 +85,8 @@ jobs:
           RUN_DATE: ${{ inputs.date }}
           # 온디맨드 티커 — workflow_dispatch 입력 또는 웹이 보낸 client_payload
           TICKER: ${{ inputs.ticker || github.event.client_payload.ticker }}
+          # 온디맨드 요청 표의 id — 웹이 client_payload에 함께 실어 보낸다. 상태를 running→done/failed로
+          REQUEST_ID: ${{ github.event.client_payload.request_id }}
           DRY_RUN: ${{ inputs.dry_run }}
           FORCE: ${{ inputs.force }}
           IF_NOT_VERIFIED: ${{ github.event_name == 'schedule' || inputs.if_not_verified }}
@@ -105,6 +107,7 @@ jobs:
           ARGS=""
           [ -n "$RUN_DATE" ] && ARGS="$ARGS --date $RUN_DATE"
           [ -n "$TICKER" ] && ARGS="$ARGS --ticker $TICKER"
+          [ -n "$REQUEST_ID" ] && ARGS="$ARGS --request-id $REQUEST_ID"
           [ "$DRY_RUN" = "true" ] && ARGS="$ARGS --dry-run"
           [ "$FORCE" = "true" ] && ARGS="$ARGS --force"
           [ "$IF_NOT_VERIFIED" = "true" ] && ARGS="$ARGS --if-not-verified"
