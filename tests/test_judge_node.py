@@ -56,7 +56,7 @@ class Recorder:
         self.saved: list[Any] = []
         self.boom = boom
 
-    def __call__(self, run_date: date, verdicts: Any, source: str) -> int:
+    def __call__(self, run_date: date, verdicts: Any, source: str, **kw: Any) -> int:
         if self.boom:
             raise self.boom
         self.saved.append((run_date, dict(verdicts), source))
@@ -118,7 +118,7 @@ def test_the_verdict_is_already_stored_when_explain_dies() -> None:
     """
     saved: list[Any] = []
 
-    def save(run_date: date, verdicts: Any, source: str) -> int:
+    def save(run_date: date, verdicts: Any, source: str, **kw: Any) -> int:
         saved.append(dict(verdicts))
         return len(verdicts)
 
@@ -279,12 +279,29 @@ def test_the_default_save_is_the_real_one() -> None:
     assert nodes._save_verdicts is store.save_verdicts
 
 
-def test_the_real_save_is_loud_until_it_exists() -> None:
-    """아직 안 만든 저장이 0을 돌려주면, 판정이 안 남는 것을 아무도 모른다."""
+def test_the_real_save_actually_sends_a_statement() -> None:
+    """조용한 no-op이면 판정이 안 남는 것을 아무도 모른다 — 실물이 문장을 보내는지 본다."""
     from verify import store
+    from verify.models import Verdict
 
-    with pytest.raises(NotImplementedError):
-        store.save_verdicts(D, {}, st.MODE_BATCH)
+    sent: list[Any] = []
+
+    class Conn:
+        def execute(self, query: Any, params: Any = None) -> Any:
+            sent.append(str(query))
+            return self
+
+    v = Verdict("무관", 50, (), ("재무",), "1.0")
+    n = store.save_verdicts(D, {"005930": v}, st.MODE_BATCH, signals=[signal()], conn=Conn())
+    assert n == 1
+    assert sent and "insert into ksv_verdicts" in sent[0]
+
+
+def test_the_node_hands_the_signals_along() -> None:
+    """이름·전략은 `SignalRow`에만 있다 — 안 넘기면 그 열이 늘 빈다 (왕복 함정)."""
+    import inspect
+
+    assert "signals" in inspect.getsource(nodes.judge)
 
 
 def test_build_input_is_a_pure_function() -> None:

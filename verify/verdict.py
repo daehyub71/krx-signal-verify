@@ -64,6 +64,10 @@ LAYER_BLIND: dict[str, str] = {
 }
 
 # 가중치. **여기 숫자를 바꾸면 테스트가 깨진다** — 산식은 테스트로 고정한다.
+# 산식의 판 번호 (F26·V5). **가중치를 고치면 여기를 올린다** — 과거 판정은 그때의 산식으로
+# 남고, 서로 다른 자로 잰 값을 한 표에 섞지 않는다. 이력은 `docs/RULES.md`에 적는다.
+RULES_VERSION = "1.0"
+
 W_RED_FLAG = -8  # 🔴 하나당
 W_AMBER_FLAG = -4  # 🟡 하나당
 FLAG_FLOOR = -24  # 플래그 감산 하한 (건수가 많다고 무한히 내려가지 않는다)
@@ -170,7 +174,7 @@ def judge(inp: VerdictInput) -> Verdict:
         모르는 것을 낮은 점수로 바꾸지 않는다.
     """
     if inp.level in ("error", "unknown"):
-        return Verdict(STAND_SILENT, NEUTRAL, (), _blind_spots(inp))
+        return Verdict(STAND_SILENT, NEUTRAL, (), _blind_spots(inp), RULES_VERSION)
 
     flagged_nos = {f.rcept_no for f in inp.flags}
     flag_days = {d.rcept_dt for d in inp.disclosures if d.rcept_no in flagged_nos}
@@ -194,4 +198,4 @@ def judge(inp: VerdictInput) -> Verdict:
         stand = STAND_CONTRADICTS
     else:
         stand = STAND_SILENT
-    return Verdict(stand, score, tuple(parts), _blind_spots(inp))
+    return Verdict(stand, score, tuple(parts), _blind_spots(inp), RULES_VERSION)

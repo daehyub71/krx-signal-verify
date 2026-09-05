@@ -14,13 +14,21 @@ PLAN이 정한 순서다: **그래프를 먼저 세우고 노드를 나중에 �
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from typing import Any
 
 from langgraph.types import Send
 
 from verify import flags, store, verdict
 from verify import state as st
-from verify.models import Evidence, RunRecord, SignalRow, UpstreamRun, VerdictInput
+from verify.models import (
+    Evidence,
+    RunRecord,
+    SignalRow,
+    UpstreamRun,
+    Verdict,
+    VerdictInput,
+)
 
 # 대기는 여기서 한다 — 테스트가 잠들지 않도록 갈아 끼울 수 있게 이름을 뺀다.
 _sleep = time.sleep
@@ -207,24 +215,34 @@ def verdict_input_for(signal: SignalRow, evidence: Evidence | None) -> VerdictIn
     )
 
 
+def judge_all(signals: Sequence[SignalRow], evidence: Sequence[Evidence]) -> dict[str, Verdict]:
+    """신호들 → `{ticker: Verdict}`. **순수 함수 — 상태를 모른다.**
+
+    fan-out이 합류한 뒤라 `evidence`에 여러 종목이 섞여 있다. **티커로 가른다** —
+    안 가르면 남의 공시로 판정한다.
+    """
+    by_ticker = {e.ticker: e for e in evidence}
+    return {
+        sig.ticker: verdict.judge(verdict_input_for(sig, by_ticker.get(sig.ticker)))
+        for sig in signals
+    }
+
+
 def judge(s: st.VerifyState) -> dict[str, Any]:
     """판정·점수를 내고 **저장까지 끝낸 뒤** 넘긴다 (F20·M3).
 
-    선행은 한 노드가 판정과 LLM 호출을 겸해, **LLM이 죽으면 판정도 같이 사라졌다.**
+    선행은 한 노드가 판정과 LLM 호출을 겸해 **LLM이 죽으면 판정도 같이 사라졌다.**
     여기서는 저장이 `explain`보다 먼저다 — 그 순서가 보장의 전부다.
-
     저장이 실패해도 **판정을 상태에서 지우지 않는다** — 메일은 나가야 한다 (F34).
     """
-    by_ticker = {e.ticker: e for e in s.get("evidence") or []}
-    verdicts = {
-        sig.ticker: verdict.judge(verdict_input_for(sig, by_ticker.get(sig.ticker)))
-        for sig in s.get("signals") or []
-    }
+    signals = s.get("signals") or []
+    verdicts = judge_all(signals, s.get("evidence") or [])
     out: dict[str, Any] = {"verdicts": verdicts}
     if not verdicts:
         return out
     try:
-        _save_verdicts(s["run_date"], verdicts, s.get("mode") or st.MODE_BATCH)
+        mode = s.get("mode") or st.MODE_BATCH
+        _save_verdicts(s["run_date"], verdicts, mode, signals=signals)
     except Exception as exc:  # noqa: BLE001 — 저장 실패가 판정을 데려가면 안 된다
         out["errors"] = [f"판정 저장 실패: {type(exc).__name__}: {exc}"]
     return out
