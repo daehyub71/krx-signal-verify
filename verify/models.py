@@ -417,6 +417,11 @@ class Evidence:
     financial: Any = None
     shorting: Any = None
 
+    # 공시 갈래에 딸린 것들 — **여섯째 갈래가 아니다.** 「생략」 표기는 다섯 개 그대로다.
+    # 자리가 없으면 오버행 감산(F15)이 영원히 안 걸린다.
+    bodies: Any = None
+    anomaly: Any = None
+
     def missing_lanes(self) -> tuple[str, ...]:
         """얻지 못한 갈래의 이름. 화면과 메일에 「생략」으로 표기한다."""
         got = (self.disclosures, self.news, self.flows, self.financial, self.shorting)

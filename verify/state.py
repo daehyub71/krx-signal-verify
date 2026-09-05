@@ -77,9 +77,13 @@ class VerifyState(TypedDict, total=False):
     investor: dict[str, list[dict[str, Any]]]  # 기관·외국인 30일
     shorting: dict[str, list[dict[str, Any]]]  # 공매도 20일 — 없을 수 있다 (F34)
 
+    # ── 묶음 조회 결과 (실행에 한 번) ──
+    context: dict[str, Any]
+
     # ── fan-out 한 갈래에만 실린다 ──
     # `Send("fetch_one", {"signal": sig})`가 넣는다. 다른 노드는 보지 않는다.
     signal: SignalRow
+    lane_ctx: dict[str, Any]
 
     # ── fan-out 합류 ──
     # ⚠ reducer가 없으면 마지막 하나만 남고 **예외도 안 난다**. 지우지 말 것.

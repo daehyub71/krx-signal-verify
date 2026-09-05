@@ -14,13 +14,29 @@ PLAN이 정한 순서다: **그래프를 먼저 세우고 노드를 나중에 �
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
-from datetime import date
+from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
+from dataclasses import replace
+from datetime import date, timedelta
 from typing import Any
 
 from langgraph.types import Send
 
-from verify import flags, lanes, store, verdict
+from verify import (
+    corp,
+    dart,
+    dart_fin,
+    dart_mcp,
+    enrich,
+    financial,
+    flags,
+    lanes,
+    mcpc,
+    news_mcp,
+    shorting,
+    store,
+    verdict,
+)
 from verify import state as st
 from verify.models import (
     Evidence,
@@ -53,16 +69,113 @@ def _fetch_signals(run_date: date) -> list[SignalRow]:
         return store.fetch_signals(cur, run_date)
 
 
-def _collect_lanes(
-    run_date: date, sig: SignalRow
+# 공시·본문·뉴스가 보는 창. **갈래마다 다르면 대조가 안 된다.**
+WINDOW_DAYS = 30
+
+
+def _corp_codes() -> dict[str, str]:
+    """`{stock_code: corp_code}`. 실행에 **한 번만** 받는다 (약 4천 건)."""
+    return corp.parse_corp_codes(dart.fetch_corp_codes())
+
+
+def _upstream(tickers: Sequence[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """수급·시세를 상위 DB에서 **한 번에** 읽는다 (F12·F17). 종목마다 부르지 않는다."""
+    with store.connect() as conn, conn.cursor() as cur:
+        return (
+            dict(enrich.fetch_flows(cur, list(tickers))),
+            dict(enrich.fetch_quotes(cur, list(tickers))),
+        )
+
+
+def _financials(corp_codes: Sequence[str], day: date) -> dict[str, Any]:
+    """재무를 **15개씩 묶어** 받는다 (F30). 종목마다 부르면 44회가 된다."""
+    return financial.read_all(dart_fin.fetch_accounts(list(corp_codes), day))
+
+
+def _shorting_state() -> Any:
+    """공매도 갈래의 상태 (F32). M8 전까지 `MISSING`이라 값이 없다."""
+    with store.connect() as conn, conn.cursor() as cur:
+        got = shorting.probe(cur)
+    return None if got.state == shorting.MISSING else got
+
+
+def prefetch(signals: Sequence[SignalRow], day: date) -> dict[str, Any]:
+    """묶어서 받을 것을 **실행에 한 번** 받는다 (F12·F17·F30·F32).
+
+    묶음 하나가 죽어도 **나머지 갈래는 살아야 한다** (F34) — 각각 따로 감싼다.
+
+    Returns:
+        `corps`·`flows`·`quotes`·`financials`·`shorting`, 그리고 실패한 것의 `errors`.
+    """
+    tickers = [s.ticker for s in signals]
+    errors: list[str] = []
+    corps = _guarded("corps", _corp_codes, errors) or {}
+    flows, quotes = _guarded("수급·시세", lambda: _upstream(tickers), errors) or ({}, {})
+    codes = [c for t in tickers if (c := corps.get(t))]
+    fins = _guarded("재무", lambda: _financials(codes, day), errors) if codes else {}
+    return {
+        "corps": corps, "flows": flows, "quotes": quotes,
+        "financials": fins or {}, "shorting": _guarded("공매도", _shorting_state, errors),
+        "errors": errors,
+    }
+
+
+def _guarded(what: str, fn: Callable[[], Any], errors: list[str]) -> Any:
+    """묶음 하나를 감싼다. **하나가 죽어도 나머지 갈래는 살아야 한다** (F34)."""
+    try:
+        return fn()
+    except Exception as exc:  # noqa: BLE001 — 묶음 단위 격리
+        errors.append(f"{what} 조회 실패: {type(exc).__name__}: {exc}")
+        return None
+
+
+def _disclosures_of(corp_code: str, day: date) -> tuple[Any, Any]:
+    """공시 목록과 **플래그된 것의 본문** (F4·F15). MCP 실패는 REST로 폴백한다."""
+    bgn = day - timedelta(days=WINDOW_DAYS)
+    items, _src = dart_mcp.fetch_disclosures(corp_code, bgn, day)
+    flagged = flags.classify(tuple(items))
+    bodies: list[Any] = []
+    for rule in {f.rule for f in flagged.flags} & set(dart_mcp.EVENT_TYPE_OF):
+        with suppress(mcpc.McpError):  # 본문은 있으면 좋은 층이다
+            bodies.extend(dart_mcp.fetch_event(corp_code, rule, bgn, day))
+    return tuple(items), tuple(bodies)
+
+
+def _news_of(company_name: str) -> Any:
+    """종목명으로 뉴스 (F11). 제목 필터까지 `news_mcp`가 건다."""
+    return tuple(news_mcp.fetch_news(company_name))
+
+
+def collect_lanes(
+    run_date: date, sig: SignalRow, ctx: Mapping[str, Any]
 ) -> tuple[Evidence, tuple[str, ...], dict[str, str]]:
     """한 종목의 다섯 갈래 (F3~F9·F34). **M2 모듈을 부르는 자리는 여기 하나다.**
 
-    지금은 공시만 실물이다 — 나머지는 M2 모듈이 있지만 corp_code·세션 배선이 남았다.
+    묶음(수급·재무·공매도)은 이미 받아 둔 것을 `ctx`에서 꺼내고, 종목별(공시·뉴스)만 부른다.
     갈래별 실패 격리는 `lanes.collect`가 한다.
     """
-    got = lanes.collect(d=run_date, ticker=sig.ticker)
-    return got.evidence, got.skipped, got.reasons
+    corp_code = str(ctx.get("corp") or "")
+    holder: dict[str, Any] = {}
+
+    def disclosures() -> Any:
+        items, bodies = _disclosures_of(corp_code, run_date)
+        holder["bodies"] = bodies
+        return items or None
+
+    got = lanes.collect(
+        d=run_date, ticker=sig.ticker,
+        disclosures=disclosures if corp_code else None,
+        news=lambda: _news_of(sig.name) or None,
+        flows=lambda: ctx.get("flows"),
+        financial=lambda: ctx.get("financial"),
+        shorting=lambda: ctx.get("shorting"),
+    )
+    ev = replace(got.evidence, bodies=holder.get("bodies"))
+    return ev, got.skipped, got.reasons
+
+
+# `fetch_one`이 부르는 이음매. 테스트가 갈아 끼운다.
+_collect_lanes = collect_lanes
 
 STUB_NODES = (
     "fill_outcomes",
@@ -167,7 +280,22 @@ def fan_out(s: st.VerifyState) -> list[Send] | str:
     if not signals:
         return "judge"
     day = s["run_date"]
-    return [Send("fetch_one", {"signal": sig, "run_date": day}) for sig in signals]
+    ctx = s.get("context") or {}
+    return [
+        Send("fetch_one", {"signal": sig, "run_date": day, "lane_ctx": _slice(ctx, sig)})
+        for sig in signals
+    ]
+
+
+def _slice(ctx: Mapping[str, Any], sig: SignalRow) -> dict[str, Any]:
+    """그 종목 몫만 떼어 payload에 싣는다. **맵 전체를 44번 복사하지 않는다.**"""
+    corp_code = str((ctx.get("corps") or {}).get(sig.ticker) or "")
+    return {
+        "corp": corp_code,
+        "flows": (ctx.get("flows") or {}).get(sig.ticker),
+        "financial": (ctx.get("financials") or {}).get(corp_code),
+        "shorting": ctx.get("shorting"),
+    }
 
 
 # ── 스텁 — M0에서는 통과만 한다 ──────────────────────────────────
@@ -223,10 +351,10 @@ def verdict_input_for(signal: SignalRow, evidence: Evidence | None) -> VerdictIn
         level=flagged.level,
         flags=flagged.flags,
         disclosures=flagged.disclosures,
-        bodies=tuple(ev.bodies or ()) if hasattr(ev, "bodies") else (),
+        bodies=tuple(ev.bodies or ()),
         news=tuple(ev.news or ()),
         flows=ev.flows,
-        anomaly=ev.anomaly if hasattr(ev, "anomaly") else None,
+        anomaly=ev.anomaly,
         financial=ev.financial,
         shorting=ev.shorting,
     )
@@ -244,7 +372,11 @@ def fetch_signals(s: st.VerifyState) -> dict[str, Any]:
     want = s.get("ticker") or ""
     if s.get("mode") == st.MODE_ONDEMAND and want:
         rows = [r for r in rows if r.ticker == want]
-    return {"signals": rows}
+    if not rows:
+        return {"signals": rows}
+    # 묶어서 받을 것은 **여기서 한 번** 받는다 — 종목 목록을 아는 첫 자리다.
+    ctx = prefetch(rows, s["run_date"])
+    return {"signals": rows, "context": ctx, "errors": ctx["errors"]}
 
 
 def fetch_one(s: st.VerifyState) -> dict[str, Any]:
@@ -255,7 +387,7 @@ def fetch_one(s: st.VerifyState) -> dict[str, Any]:
     """
     sig: SignalRow = s["signal"]
     try:
-        ev, skipped, reasons = _collect_lanes(s["run_date"], sig)
+        ev, skipped, reasons = _collect_lanes(s["run_date"], sig, s.get("lane_ctx") or {})
     except Exception as exc:  # noqa: BLE001 — 종목 단위 격리
         ev = Evidence(d=s["run_date"], ticker=sig.ticker)
         skipped, reasons = ev.missing_lanes(), {"수집": f"{type(exc).__name__}: {exc}"}

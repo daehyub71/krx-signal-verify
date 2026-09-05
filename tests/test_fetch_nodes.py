@@ -144,7 +144,7 @@ def test_a_failed_fetch_does_not_escape(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_fetch_one_returns_one_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(nodes, "_collect_lanes", lambda run_date, sig: (
+    monkeypatch.setattr(nodes, "_collect_lanes", lambda run_date, sig, ctx=None: (
         Evidence(d=run_date, ticker=sig.ticker, disclosures=("공시",)), (), {}
     ))
     sig = SignalRow(d=D, strategy="mtf", ticker="000430", name="대원강업", evidence={})
@@ -155,7 +155,7 @@ def test_fetch_one_returns_one_evidence(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_fetch_one_reports_skipped_lanes(monkeypatch: pytest.MonkeyPatch) -> None:
     """빈 갈래가 **조용히 빠지지 않는다** (F34)."""
-    monkeypatch.setattr(nodes, "_collect_lanes", lambda run_date, sig: (
+    monkeypatch.setattr(nodes, "_collect_lanes", lambda run_date, sig, ctx=None: (
         Evidence(d=run_date, ticker=sig.ticker), ("뉴스",), {"뉴스": "RuntimeError: 429"}
     ))
     sig = SignalRow(d=D, strategy="mtf", ticker="000430", name="대원강업", evidence={})
@@ -166,7 +166,7 @@ def test_fetch_one_reports_skipped_lanes(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_one_dead_ticker_does_not_kill_the_fan_out(monkeypatch: pytest.MonkeyPatch) -> None:
     """**한 종목이 fan-out을 죽이지 않는다** — 44종목 중 하나가 터져도 나머지는 온다."""
-    def boom(run_date: date, sig: SignalRow) -> Any:
+    def boom(run_date: date, sig: SignalRow, ctx: Any = None) -> Any:
         raise RuntimeError("수집 전체 실패")
 
     monkeypatch.setattr(nodes, "_collect_lanes", boom)
@@ -180,7 +180,7 @@ def test_one_dead_ticker_does_not_kill_the_fan_out(monkeypatch: pytest.MonkeyPat
 
 def test_evidence_is_a_list_so_the_reducer_can_join(monkeypatch: pytest.MonkeyPatch) -> None:
     """`Annotated[list, operator.add]`가 합친다 — 목록이 아니면 합류가 깨진다."""
-    monkeypatch.setattr(nodes, "_collect_lanes", lambda run_date, sig: (
+    monkeypatch.setattr(nodes, "_collect_lanes", lambda run_date, sig, ctx=None: (
         Evidence(d=run_date, ticker=sig.ticker), (), {}
     ))
     sig = SignalRow(d=D, strategy="mtf", ticker="000430", name="대원강업", evidence={})
