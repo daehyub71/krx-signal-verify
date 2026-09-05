@@ -127,6 +127,8 @@ def test_the_verdict_is_already_stored_when_explain_dies() -> None:
 
     app = graph.build_graph(overrides={
         "gate": lambda s: {"gate": st.GATE_READY},  # 실DB를 부르지 않는다
+        "fetch_signals": lambda s: {"signals": [signal()]},
+        "fetch_one": lambda s: {"evidence": [evidence()]},
         "judge": _judge_with(save),
         "explain": explode,
     })
@@ -272,11 +274,14 @@ def test_financial_and_shorting_reach_the_blind_spots(saver: Recorder) -> None:
 def test_the_default_save_is_the_real_one() -> None:
     """이음매가 기본값으로 아무것도 안 하면 **판정이 조용히 안 남는다.**
 
-    테스트는 늘 갈아 끼우므로 기본값이 무엇인지는 여기서만 확인된다.
+    **런타임 값을 볼 수 없다** — `conftest`의 `no_real_database`가 모든 테스트에서
+    이 이음매를 막아 두기 때문이다(테스트가 프로덕션 DB에 쓴 적이 있어서다).
+    그래서 소스에 적힌 기본값을 본다.
     """
-    from verify import store
+    import pathlib as _p
 
-    assert nodes._save_verdicts is store.save_verdicts
+    src = _p.Path(nodes.__file__).read_text(encoding="utf-8")
+    assert "_save_verdicts = store.save_verdicts" in src
 
 
 def test_the_real_save_actually_sends_a_statement() -> None:

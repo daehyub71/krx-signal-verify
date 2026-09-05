@@ -193,7 +193,16 @@ def save_verdicts(
     ]
     if not rows:
         return 0
-    c = conn if conn is not None else connect()
+    if conn is not None:
+        return _write(conn, rows)  # 커밋은 커넥션 주인이 한다
+    # **직접 열면 직접 커밋한다.** psycopg는 기본이 비-autocommit이라, 커밋 없이 커넥션이
+    # 사라지면 **예외도 없이 롤백된다** — 저장한 줄 알았는데 0행이다 (2026-09-05 실행에서 잡혔다).
+    with connect() as own:
+        return _write(own, rows)
+
+
+def _write(c: Queryable, rows: Sequence[dict[str, Any]]) -> int:
+    """청크로 나눠 보낸다. **어디까지 갔는지**를 실패 메시지에 적는다."""
     done = 0
     for i in range(0, len(rows), CHUNK_ROWS):
         chunk = rows[i : i + CHUNK_ROWS]
@@ -228,3 +237,36 @@ def fetch_verdicts(
     """
     rows = conn.execute(Q_VERDICTS, (run_date, source)).fetchall()
     return {t: v for t, v, _ in (from_row(r) for r in rows)}
+
+# ── 그날의 신호 (F2) ─────────────────────────────────────────────
+#
+# **`suppressed = false`인 것만.** 억제된 신호는 상위가 메일에 안 실었으니 검증 대상이 아니다.
+# 실측(2026-09-05): 572행 중 **309행이 억제**다 — 안 거르면 절반 이상이 는다.
+#
+# **`sent_email`을 쓰지 않는다.** 상위가 그 열을 채우지 않아 전부 `false`다 —
+# 조건에 넣으면 매일 0건이 된다 (선행 2026-08-26 실측).
+Q_SIGNALS = """
+select d, strategy, ticker, name, evidence
+from ksa_signals
+where d = %s and not suppressed
+order by strategy, ticker
+"""
+
+
+def fetch_signals(conn: Queryable, run_date: date) -> list[SignalRow]:
+    """그날 검증할 신호 (F2). 순서는 상위 메일과 같게 전략·티커 순.
+
+    Args:
+        conn: DB 커넥션.
+        run_date: KST 기준일.
+
+    Returns:
+        `SignalRow` 목록. 신호 없는 날이면 빈 목록 — 휴장일이나 전량 억제된 날이다.
+    """
+    rows = conn.execute(Q_SIGNALS, (run_date,)).fetchall()
+    return [
+        SignalRow(d=d, strategy=str(strategy or ""), ticker=str(ticker),
+                  name=str(name or ""), evidence=ev)
+        for d, strategy, ticker, name, ev in rows
+    ]
+

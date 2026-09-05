@@ -264,3 +264,39 @@ def test_batch_and_ondemand_do_not_overwrite_each_other() -> None:
     b = store.to_row(signal(), a_verdict(), store.SOURCE_ONDEMAND)
     assert (a["d"], a["ticker"]) == (b["d"], b["ticker"])
     assert a["source"] != b["source"]
+
+
+# ── 커밋 — 실행에서만 드러난 함정 ─────────────────────────────────
+
+
+def test_an_owned_connection_is_committed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """⚠ psycopg는 **기본이 비-autocommit**이다. 커밋 없이 커넥션이 사라지면
+    **예외도 없이 롤백**된다 — 저장한 줄 알았는데 0행이다 (2026-09-05 실행에서 잡혔다).
+
+    `with connect() as c:` 의 `__exit__`가 커밋한다. 그 `with`를 빼면 여기가 깨진다.
+    """
+    events: list[str] = []
+
+    class Owned:
+        def __enter__(self) -> Owned:
+            events.append("enter")
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            events.append("exit")  # 여기서 커밋된다
+
+        def execute(self, query: Any, params: Any = None) -> Owned:
+            events.append("execute")
+            return self
+
+    monkeypatch.setattr(store, "connect", Owned)
+    n = store.save_verdicts(D, {"005930": a_verdict()}, "batch", signals=[signal()])
+    assert n == 1
+    assert events == ["enter", "execute", "exit"]
+
+
+def test_a_borrowed_connection_is_not_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """대역·호출자 커넥션은 **주인이 따로 있다** — 여기서 닫거나 커밋하지 않는다."""
+    conn = FakeConn()
+    store.save_verdicts(D, {"005930": a_verdict()}, "batch", signals=[signal()], conn=conn)
+    assert not hasattr(conn, "committed")

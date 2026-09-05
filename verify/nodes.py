@@ -15,11 +15,12 @@ from __future__ import annotations
 
 import time
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from langgraph.types import Send
 
-from verify import flags, store, verdict
+from verify import flags, lanes, store, verdict
 from verify import state as st
 from verify.models import (
     Evidence,
@@ -42,14 +43,30 @@ TO_REPORT = "report"
 # 아직 통과만 하는 노드들. 뒤 마일스톤에서 하나씩 실물이 된다.
 # **실물이 되면 여기서 뺀다** — 안 빼면 스텁 테스트가 그 노드의 I/O를 부른다.
 # `gate`가 그랬다: 로컬엔 `.env`가 있어 통과하고 **CI에서만 터졌다** (2026-09-02).
-# 저장 이음매 — 테스트가 갈아 끼운다 (`_sleep`과 같은 꼴).
+# I/O 이음매 — 테스트가 갈아 끼운다 (`_sleep`과 같은 꼴).
 _save_verdicts = store.save_verdicts
+
+
+def _fetch_signals(run_date: date) -> list[SignalRow]:
+    """그날 신호를 상위에서 읽는다 (F2). 커넥션 수명이 여기서 끝난다."""
+    with store.connect() as conn, conn.cursor() as cur:
+        return store.fetch_signals(cur, run_date)
+
+
+def _collect_lanes(
+    run_date: date, sig: SignalRow
+) -> tuple[Evidence, tuple[str, ...], dict[str, str]]:
+    """한 종목의 다섯 갈래 (F3~F9·F34). **M2 모듈을 부르는 자리는 여기 하나다.**
+
+    지금은 공시만 실물이다 — 나머지는 M2 모듈이 있지만 corp_code·세션 배선이 남았다.
+    갈래별 실패 격리는 `lanes.collect`가 한다.
+    """
+    got = lanes.collect(d=run_date, ticker=sig.ticker)
+    return got.evidence, got.skipped, got.reasons
 
 STUB_NODES = (
     "fill_outcomes",
     "aggregate",
-    "fetch_signals",
-    "fetch_one",
     "explain",
     "render",
     "send_email",
@@ -140,11 +157,17 @@ def fan_out(s: st.VerifyState) -> list[Send] | str:
 
     합류는 `state.evidence`의 reducer가 한다 — **없으면 마지막 하나만 남고 예외도 안 난다.**
     신호가 0건이면 **`judge`로 직행**한다. 빈 목록을 돌려주면 그래프가 갈 곳을 잃는다.
+
+    ⚠ **`Send`의 payload가 그 노드의 상태를 통째로 대신한다** — 합쳐지지 않는다.
+    `run_date`를 함께 실어야 한다. 안 실으면 `fetch_one`이 `KeyError`로 죽고,
+    fan-out 전체가 빈 증거로 지나간다 (2026-09-05 실행에서 잡혔다 — 단위 테스트는
+    상태를 직접 만들어 주므로 이 함정을 못 본다).
     """
     signals = s.get("signals", [])
     if not signals:
         return "judge"
-    return [Send("fetch_one", {"signal": sig}) for sig in signals]
+    day = s["run_date"]
+    return [Send("fetch_one", {"signal": sig, "run_date": day}) for sig in signals]
 
 
 # ── 스텁 — M0에서는 통과만 한다 ──────────────────────────────────
@@ -184,14 +207,8 @@ def gate(s: st.VerifyState) -> dict[str, Any]:
         return gate_from(store.fetch_upstream_run(conn, s["run_date"]))
 
 
-def fetch_signals(s: st.VerifyState) -> dict[str, Any]:
-    """그날 `suppressed = false`인 신호를 읽는다 (M2)."""
-    return {}
 
 
-def fetch_one(s: st.VerifyState) -> dict[str, Any]:
-    """한 종목의 증거 다섯 갈래를 모은다 (M2). 실패한 갈래는 비우고 계속한다."""
-    return {}
 
 
 def verdict_input_for(signal: SignalRow, evidence: Evidence | None) -> VerdictInput:
@@ -213,6 +230,39 @@ def verdict_input_for(signal: SignalRow, evidence: Evidence | None) -> VerdictIn
         financial=ev.financial,
         shorting=ev.shorting,
     )
+
+
+def fetch_signals(s: st.VerifyState) -> dict[str, Any]:
+    """그날 검증할 신호를 읽는다 (F2). 온디맨드면 그 종목 하나만 남긴다 (V8).
+
+    **예외를 밖으로 내지 않는다** — raise하면 `record_run`에 못 가 실패 기록까지 사라진다.
+    """
+    try:
+        rows = _fetch_signals(s["run_date"])
+    except Exception as exc:  # noqa: BLE001 — I/O 노드의 규칙 (N11)
+        return {"signals": [], "errors": [f"신호 조회 실패: {type(exc).__name__}: {exc}"]}
+    want = s.get("ticker") or ""
+    if s.get("mode") == st.MODE_ONDEMAND and want:
+        rows = [r for r in rows if r.ticker == want]
+    return {"signals": rows}
+
+
+def fetch_one(s: st.VerifyState) -> dict[str, Any]:
+    """종목 하나의 증거를 모은다 (F3~F9·F34). fan-out이 종목마다 부른다.
+
+    **한 종목이 fan-out을 죽이지 않는다** — 통째로 실패해도 빈 증거로 자리를 남긴다.
+    빈 갈래는 `errors`에 이유와 함께 남는다 (조용히 빠지지 않는다).
+    """
+    sig: SignalRow = s["signal"]
+    try:
+        ev, skipped, reasons = _collect_lanes(s["run_date"], sig)
+    except Exception as exc:  # noqa: BLE001 — 종목 단위 격리
+        ev = Evidence(d=s["run_date"], ticker=sig.ticker)
+        skipped, reasons = ev.missing_lanes(), {"수집": f"{type(exc).__name__}: {exc}"}
+    errors = [f"{sig.ticker} {k} 생략: {v}" for k, v in reasons.items() if v]
+    if skipped and not errors:
+        errors = [f"{sig.ticker} {' · '.join(skipped)} 생략"]
+    return {"evidence": [ev], "errors": errors}
 
 
 def judge_all(signals: Sequence[SignalRow], evidence: Sequence[Evidence]) -> dict[str, Verdict]:
