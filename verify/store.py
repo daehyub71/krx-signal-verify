@@ -17,13 +17,14 @@ Supabase REST는 **1000행에서 조용히 잘린다** — `limit(2000)`을 줘�
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
 from typing import Any, Protocol
 
 import psycopg
 
 from verify import config
-from verify.models import UpstreamRun
+from verify.models import UpstreamRun, Verdict
 
 
 def connect() -> psycopg.Connection[Any]:
@@ -67,3 +68,27 @@ def fetch_upstream_run(conn: Queryable, run_date: date) -> UpstreamRun | None:
     if row is None:
         return None
     return UpstreamRun(run_at=row[0], data_date=row[1], status=str(row[2]), signals=int(row[3]))
+
+# ── 판정 저장 (M3) ───────────────────────────────────────────────
+
+
+def save_verdicts(run_date: date, verdicts: Mapping[str, Verdict], source: str) -> int:
+    """그날 판정을 `ksv_verdicts`에 남긴다 (F20).
+
+    **`judge` 노드가 `explain`(LLM)보다 먼저 부른다** — LLM이 죽어도 판정은 이미 여기 있다.
+
+    Args:
+        run_date: KST 기준일.
+        verdicts: `{ticker: Verdict}`.
+        source: `batch` / `ondemand` — 집계는 기본으로 `batch`만 본다 (F43).
+
+    Returns:
+        저장한 행 수.
+
+    Raises:
+        NotImplementedError: 아직 — 열 구성·청크·왕복 테스트는 다음 태스크다.
+            **조용히 0을 돌려주지 않는다.** 그러면 판정이 안 남는 것을 아무도 모른다.
+    """
+    raise NotImplementedError(
+        f"ksv_verdicts 저장은 다음 태스크다 ({len(verdicts)}건 · {run_date} · {source})"
+    )

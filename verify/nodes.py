@@ -18,9 +18,9 @@ from typing import Any
 
 from langgraph.types import Send
 
+from verify import flags, store, verdict
 from verify import state as st
-from verify import store
-from verify.models import RunRecord, UpstreamRun
+from verify.models import Evidence, RunRecord, SignalRow, UpstreamRun, VerdictInput
 
 # 대기는 여기서 한다 — 테스트가 잠들지 않도록 갈아 끼울 수 있게 이름을 뺀다.
 _sleep = time.sleep
@@ -34,12 +34,14 @@ TO_REPORT = "report"
 # 아직 통과만 하는 노드들. 뒤 마일스톤에서 하나씩 실물이 된다.
 # **실물이 되면 여기서 뺀다** — 안 빼면 스텁 테스트가 그 노드의 I/O를 부른다.
 # `gate`가 그랬다: 로컬엔 `.env`가 있어 통과하고 **CI에서만 터졌다** (2026-09-02).
+# 저장 이음매 — 테스트가 갈아 끼운다 (`_sleep`과 같은 꼴).
+_save_verdicts = store.save_verdicts
+
 STUB_NODES = (
     "fill_outcomes",
     "aggregate",
     "fetch_signals",
     "fetch_one",
-    "judge",
     "explain",
     "render",
     "send_email",
@@ -184,9 +186,48 @@ def fetch_one(s: st.VerifyState) -> dict[str, Any]:
     return {}
 
 
+def verdict_input_for(signal: SignalRow, evidence: Evidence | None) -> VerdictInput:
+    """신호 하나 + 그 종목의 증거 → 산식 입력. **순수 함수 — 상태를 모른다.**
+
+    나중에 온디맨드·재판정이 같은 함수를 쓴다. `Evidence`를 그대로 넘기지 않는 이유는
+    `models.VerdictInput` 주석에 있다 — 산식을 저장 형태와 떼어 놓는다.
+    """
+    ev = evidence or Evidence(d=signal.d, ticker=signal.ticker)
+    flagged = flags.classify(tuple(ev.disclosures or ()))
+    return VerdictInput(
+        level=flagged.level,
+        flags=flagged.flags,
+        disclosures=flagged.disclosures,
+        bodies=tuple(ev.bodies or ()) if hasattr(ev, "bodies") else (),
+        news=tuple(ev.news or ()),
+        flows=ev.flows,
+        anomaly=ev.anomaly if hasattr(ev, "anomaly") else None,
+        financial=ev.financial,
+        shorting=ev.shorting,
+    )
+
+
 def judge(s: st.VerifyState) -> dict[str, Any]:
-    """판정과 점수를 내고 저장한다 (M3). **LLM보다 먼저, 저장까지 여기서.**"""
-    return {}
+    """판정·점수를 내고 **저장까지 끝낸 뒤** 넘긴다 (F20·M3).
+
+    선행은 한 노드가 판정과 LLM 호출을 겸해, **LLM이 죽으면 판정도 같이 사라졌다.**
+    여기서는 저장이 `explain`보다 먼저다 — 그 순서가 보장의 전부다.
+
+    저장이 실패해도 **판정을 상태에서 지우지 않는다** — 메일은 나가야 한다 (F34).
+    """
+    by_ticker = {e.ticker: e for e in s.get("evidence") or []}
+    verdicts = {
+        sig.ticker: verdict.judge(verdict_input_for(sig, by_ticker.get(sig.ticker)))
+        for sig in s.get("signals") or []
+    }
+    out: dict[str, Any] = {"verdicts": verdicts}
+    if not verdicts:
+        return out
+    try:
+        _save_verdicts(s["run_date"], verdicts, s.get("mode") or st.MODE_BATCH)
+    except Exception as exc:  # noqa: BLE001 — 저장 실패가 판정을 데려가면 안 된다
+        out["errors"] = [f"판정 저장 실패: {type(exc).__name__}: {exc}"]
+    return out
 
 
 def explain(s: st.VerifyState) -> dict[str, Any]:
