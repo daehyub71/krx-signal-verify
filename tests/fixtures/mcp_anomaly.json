@@ -1,0 +1,57 @@
+{
+  "resolved": {
+    "corp_code": "00126380",
+    "corp_name": "삼성전자",
+    "corp_eng_name": "SAMSUNG ELECTRONICS CO,.LTD",
+    "stock_code": "005930",
+    "modify_date": "20251201"
+  },
+  "period": {
+    "start": "20230829",
+    "end": "20260829"
+  },
+  "audit_years": [
+    2024,
+    2025,
+    2026
+  ],
+  "score": 0,
+  "verdict": "clean",
+  "summary_text": "삼성전자 (20230829~20260829): ✅ 이상 없음, 점수 0/100. 주요 지표: 정정공시 42/2000건 (2.1%).",
+  "flags": [],
+  "stats": {
+    "disclosures_total": 2000,
+    "amendments": 42,
+    "amendment_ratio": 0.021,
+    "capital_stress_filings": 0,
+    "auditor_changes": 0,
+    "unique_auditors": []
+  },
+  "audit_timeline": [
+    {
+      "year": 2024,
+      "auditor": null,
+      "opinion": "적정의견",
+      "emphasis": null,
+      "status": "000",
+      "message": null
+    },
+    {
+      "year": 2025,
+      "auditor": null,
+      "opinion": "적정의견",
+      "emphasis": null,
+      "status": "000",
+      "message": null
+    },
+    {
+      "year": 2026,
+      "auditor": null,
+      "opinion": null,
+      "emphasis": null,
+      "status": "013",
+      "message": "조회된 데이타가 없습니다."
+    }
+  ],
+  "note": "verdict 는 휴리스틱. 실제 투자 판단은 원문(download_document) 확인 필수."
+}

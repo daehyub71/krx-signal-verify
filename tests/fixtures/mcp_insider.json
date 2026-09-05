@@ -1,0 +1,64 @@
+{
+  "resolved": {
+    "corp_code": "00126380",
+    "corp_name": "삼성전자",
+    "corp_eng_name": "SAMSUNG ELECTRONICS CO,.LTD",
+    "stock_code": "005930",
+    "modify_date": "20251201"
+  },
+  "period": {
+    "start": "20260730",
+    "end": "20260829"
+  },
+  "cluster_threshold": 3,
+  "summary_text": "삼성전자 20260730~20260829: 39건 보고 (매수 10 / 매도 29). 고유 매수자 7명 / 매도자 28명, 순매도 -16,835주. → 내부자 매도 클러스터 시그널. 최강 클러스터: 2026Q3 (매수 7명/매도 28명).",
+  "summary": {
+    "reports_total": 39,
+    "buy_events": 10,
+    "sell_events": 29,
+    "unique_buyers": 7,
+    "unique_sellers": 28,
+    "net_change_shares": -16835,
+    "signal": "strong_sell_cluster",
+    "strongest_quarter": "2026Q3"
+  },
+  "quarterly_clusters": [
+    {
+      "quarter": "2026Q3",
+      "buyers": 7,
+      "sellers": 28,
+      "net_change": -16835,
+      "cluster": "sell_cluster",
+      "reporters_total": 39,
+      "reporters_truncated": true,
+      "reporters": [
+        {
+          "name": "노태문",
+          "change": 3045,
+          "role": "대표사장"
+        },
+        {
+          "name": "이태관",
+          "change": -2500,
+          "role": "부사장"
+        },
+        {
+          "name": "나기홍",
+          "change": -2370,
+          "role": "부사장"
+        },
+        {
+          "name": "김홍경",
+          "change": -2300,
+          "role": "부사장"
+        },
+        {
+          "name": "이학민",
+          "change": -2000,
+          "role": "부사장"
+        }
+      ]
+    }
+  ],
+  "note": "DART 는 변동사유(장내매수/증여/유상증자 등)를 구분하지 않음. 순수 자발적 매수/매도 해석 시 raw items 의 report_tp·chg_rsn 참조 권장."
+}
