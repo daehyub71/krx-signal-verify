@@ -20,26 +20,40 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from typing import Any
+
 from verify import (  # noqa: E402
-    config, corp, dart, dart_fin, dart_mcp, financial, lanes, mcpc, shorting, store,
+    config,
+    corp,
+    dart,
+    dart_fin,
+    dart_mcp,
+    financial,
+    lanes,
+    mcpc,
+    shorting,
+    store,
 )
 
 TODAY = dt.date.today()
 
 
-def _pick(cur: object, n: int = 4) -> list[tuple[str, str]]:
-    """일반 종목 n개 + **금융사 1개**."""
-    cur.execute(  # type: ignore[attr-defined]
+def _pick(cur: Any, n: int = 4) -> list[tuple[str, str, str]]:
+    """일반 종목 n개 + **금융사 1개**. 금융사가 없으면 F31을 못 본다."""
+    cur.execute(
         "select ticker, name, sector from ksc_tickers where sector is not null "
-        "and sector not in ('보험','증권','은행') order by ticker limit %s", (n,))
-    rows = list(cur.fetchall())  # type: ignore[attr-defined]
-    cur.execute(  # type: ignore[attr-defined]
-        "select ticker, name, sector from ksc_tickers where sector = '보험' order by ticker limit 1")
-    rows += list(cur.fetchall())  # type: ignore[attr-defined]
-    return rows
+        "and sector not in ('보험','증권','은행') order by ticker limit %s",
+        (n,),
+    )
+    rows: list[tuple[str, str, str]] = list(cur.fetchall())
+    cur.execute(
+        "select ticker, name, sector from ksc_tickers "
+        "where sector = '보험' order by ticker limit 1"
+    )
+    return rows + list(cur.fetchall())
 
 
-def check_financials(cur: object, codes: dict[str, str]) -> int:
+def check_financials(cur: Any, codes: dict[str, str]) -> int:
     print("① 재무 5종목 — 코드가 낸 값 ↔ DART 원문")
     picks = _pick(cur)
     pairs = [(t, codes[t]) for t, _, _ in picks if t in codes]
@@ -63,13 +77,15 @@ def check_financials(cur: object, codes: dict[str, str]) -> int:
                 bad += 0 if label not in raw else 1
                 continue
             same = financial.amount(raw.get(label)) == c.now
-            print(f"     {label:<6s} {c.now:>22,} ↔ 원문 {raw.get(label):>24s} {'✓' if same else '⚠'}")
+            mark = "✓" if same else "⚠"
+            print(f"     {label:<6s} {c.now:>22,} ↔ 원문 {raw.get(label):>24s} {mark}")
             bad += 0 if same else 1
         if f.debt_ratio is not None:
             liab, eq = financial.amount(raw.get("부채총계")), financial.amount(raw.get("자본총계"))
             calc = liab / eq * 100 if liab and eq else None
             ok = calc is not None and abs(calc - f.debt_ratio) < 0.01
-            print(f"     부채비율 {f.debt_ratio:>21.1f}% ↔ 원문 계산 {calc:.1f}% {'✓' if ok else '⚠'}")
+            shown = f"{calc:.1f}%" if calc is not None else "—"
+            print(f"     부채비율 {f.debt_ratio:>21.1f}% ↔ 원문 계산 {shown} {'✓' if ok else '⚠'}")
             bad += 0 if ok else 1
         if f.absent:
             print(f"     비운 항목: {' · '.join(f.absent)}")
@@ -94,7 +110,7 @@ def check_fallback(codes: dict[str, str]) -> int:
     return 0 if (same and src2 == dart_mcp.SOURCE_REST) else 1
 
 
-def check_lanes(cur: object) -> int:
+def check_lanes(cur: Any) -> int:
     print("\n③ 갈래 격리 — 하나를 죽여도 나머지가 온다")
 
     def boom() -> object:
@@ -110,11 +126,11 @@ def check_lanes(cur: object) -> int:
     print(f"   표기: {' / '.join(got.notes())}")
     print(f"   남은 갈래: 공시={got.evidence.disclosures} · 수급={got.evidence.flows}")
 
-    f = lanes.freshness(cur, today=TODAY)  # type: ignore[arg-type]
+    f = lanes.freshness(cur, today=TODAY)
     print(f"\n   상위 신선도: 기준일={f.data_date} · {f.days_behind}일 뒤 · 낡음={f.stale}")
     print(f"   {f.note or '(정상 — 아무 말도 하지 않는다)'}")
 
-    s = shorting.probe(cur)  # type: ignore[arg-type]
+    s = shorting.probe(cur)
     print(f"   공매도 갈래: {s.state} (ok={s.ok}) — {s.reason}")
     return 0 if (got.skipped == ("뉴스", "공매도") and got.evidence.disclosures) else 1
 
