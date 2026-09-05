@@ -1,0 +1,111 @@
+name: verify
+
+# **상위 알림이 끝나면 즉시 깨어난다** (SPEC F1·M6).
+# `krx-signal-alerts`의 `alert.yml` 마지막 단계가 이 리포로 `repository_dispatch`를 보낸다 —
+# `workflow_run`은 같은 저장소 안에서만 동작해서 쓸 수 없다.
+#
+# **게이트는 이벤트가 아니라 DB를 믿는다.** dispatch는 「상위 워크플로가 끝났다」만 말한다.
+# 상위가 아직 `ksa_runs`에 쓰지 않았을 수 있으므로 `gate` 노드가 1분×10회 기다렸다 `gate_timeout`.
+on:
+  repository_dispatch:
+    # alert-completed — 상위 배치가 끝났다 (F1)
+    # verify-ticker   — 웹의 온디맨드 요청. `client_payload.ticker` 하나만 본다 (F41·V8)
+    types: [alert-completed, verify-ticker]
+
+  # 예비 cron. dispatch가 오지 않은 날(상위 실패·토큰 만료)에도 검증은 돈다.
+  # 09:05 KST = 00:05 UTC. 상위는 08:20 KST에 보내므로 45분 여유가 있다.
+  # `--if-not-verified`라서 dispatch로 이미 돌았으면 로그 한 줄 남기고 종료 0이다.
+  schedule:
+    - cron: "5 0 * * 0-4"
+
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '기준일 (YYYYMMDD, 비우면 서울 오늘)'
+        required: false
+        type: string
+      ticker:
+        description: '온디맨드 — 이 종목만 검증 (6자리 영숫자)'
+        required: false
+        type: string
+      dry_run:
+        description: '발송 없이 결과만 출력 (판정 저장은 한다)'
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: '이미 검증했어도 다시 한다'
+        required: false
+        type: boolean
+        default: false
+      if_not_verified:
+        description: '예비 cron 흉내 — 이미 돌았으면 아무것도 하지 않는다'
+        required: false
+        type: boolean
+        default: false
+
+# 최소 권한: 이 워크플로는 리포에 쓰지 않는다 (결과는 Supabase·메일로 간다). SPEC N15.
+permissions:
+  contents: read
+
+# 예비 cron·dispatch·온디맨드가 겹칠 수 있다. 겹치면 뒤엣것이 기다린다 —
+# 앞엣것을 죽이면 판정이 반쯤 저장된 채 끝나고, 메일이 나간 뒤일 수도 있다.
+concurrency:
+  group: verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # 게이트 대기(1분×10회) + MCP 콜드스타트(빈 npm 캐시 12초) + 종목별 조회 + LLM 1회.
+    # 로컬 실측 15종목 10초. 25분은 게이트가 끝까지 기다리는 최악을 감안한 값이다.
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # MCP 서버는 npx로 띄운다 (SPEC N5 — 버전 고정은 verify/mcpc.py의 SERVERS).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      # 입력을 셸에 직접 보간하지 않는다 — `${{ inputs.ticker }}`나
+      # `${{ github.event.client_payload.ticker }}`를 run: 안에 그대로 쓰면 임의 명령 주입 경로다.
+      # 전부 env로 받고, 티커는 argparse가 `^[0-9A-Z]{6}$`로 다시 검사한다.
+      - name: 검증
+        env:
+          RUN_DATE: ${{ inputs.date }}
+          # 온디맨드 티커 — workflow_dispatch 입력 또는 웹이 보낸 client_payload
+          TICKER: ${{ inputs.ticker || github.event.client_payload.ticker }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
+          IF_NOT_VERIFIED: ${{ github.event_name == 'schedule' || inputs.if_not_verified }}
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENTS: ${{ secrets.RECIPIENTS }}
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+        # `-u`로 돌린다 — 버퍼링되면 시간 초과로 잘렸을 때 로그가 통째로 빈다
+        # (상위 프로젝트에서 실제로 겪었다, 2026-08-31).
+        run: |
+          ARGS=""
+          [ -n "$RUN_DATE" ] && ARGS="$ARGS --date $RUN_DATE"
+          [ -n "$TICKER" ] && ARGS="$ARGS --ticker $TICKER"
+          [ "$DRY_RUN" = "true" ] && ARGS="$ARGS --dry-run"
+          [ "$FORCE" = "true" ] && ARGS="$ARGS --force"
+          [ "$IF_NOT_VERIFIED" = "true" ] && ARGS="$ARGS --if-not-verified"
+          python -u -m verify.main $ARGS

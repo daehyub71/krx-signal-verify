@@ -75,6 +75,18 @@ def initial_state(args: argparse.Namespace) -> st.VerifyState:
     }
 
 
+def _already_verified(run_date: date) -> bool:
+    """그날 배치 판정이 `ksv_verdicts`에 이미 있는가 (F43 — `batch`만 본다).
+
+    예비 cron이 dispatch와 겹친 날, 두 번째 실행이 **메일을 두 번 보내지 않게** 한다.
+    온디맨드 행은 세지 않는다 — 궁금해서 하나 넣은 것이 「오늘 배치를 돌렸다」가 되면 안 된다.
+    """
+    from verify import store  # main은 그래프 밖이라 여기서만 DB를 안다
+
+    with store.connect() as conn, conn.cursor() as cur:
+        return bool(store.fetch_verdicts(cur, run_date))
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -94,7 +106,10 @@ def main(
     config.load_env()
     args = parse_args(argv)
 
-    if args.if_not_verified and not args.force and verified_check and verified_check(args.run_date):
+    # 예비 cron(09:05 KST)은 dispatch로 이미 돌았는지 모른다 — **DB를 보고** 판단한다.
+    # 주입이 없으면 실물(`_already_verified`)을 쓴다. M0에서는 주입으로만 썼다.
+    check = verified_check or _already_verified
+    if args.if_not_verified and not args.force and check(args.run_date):
         print(f"{args.run_date}는 이미 검증했다 — 아무것도 하지 않는다")
         return 0
 
