@@ -225,6 +225,27 @@ class FlowDay:
 
 
 @dataclass(frozen=True, slots=True)
+class Quote:
+    """종목 하나의 시세·시총 참고 — 상위 `ksc_tickers` + `ksc_bars` (F12).
+
+    **호출 0회, 키 0개.** 상위 `krx-stock-charts`가 매일 채워 둔 값을 SQL로 읽는다.
+
+    없는 값은 `None`이다 — 신규 상장이나 오래 정지된 종목은 시총만 있고 일봉이 없다.
+    `0`으로 채우면 「거래대금 0원」이라는 없는 사실이 생긴다.
+    """
+
+    ticker: str
+    name: str = ""  # 뉴스 검색어이자 제목 필터의 기준 (news_mcp)
+    market: str = ""  # KOSPI / KOSDAQ — M4가 소속 시장 지수를 고를 때 쓴다 (F23)
+    mktcap: int | None = None
+    list_shrs: int | None = None
+    last_d: date | None = None  # 마지막 일봉 날짜
+    close: int | None = None
+    trdval: int | None = None  # 최근 `bar_days` 거래일 거래대금 합(원)
+    bar_days: int = 0  # 실제로 센 일봉 수 — 창이 짧으면 여기가 작다
+
+
+@dataclass(frozen=True, slots=True)
 class InvestorFlows:
     """종목 하나의 수급 30일. 날짜 **오름차순**.
 
