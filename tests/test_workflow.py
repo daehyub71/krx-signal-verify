@@ -36,9 +36,25 @@ def test_it_wakes_on_the_upstream_dispatch() -> None:
     assert "alert-completed" in YML
 
 
+def event_types() -> list[str]:
+    """`repository_dispatch:` 아래 `types:` 목록만. **주석에 있는 이름은 세지 않는다.**"""
+    block = YML.split("repository_dispatch:", 1)[1].split("schedule:", 1)[0]
+    m = re.search(r"types:\s*\[([^\]]*)\]", block)
+    assert m, "types: 가 없다"
+    return [t.strip() for t in m.group(1).split(",")]
+
+
+def test_it_wakes_on_the_upstream_dispatch_type() -> None:
+    assert "alert-completed" in event_types()
+
+
 def test_it_accepts_an_ondemand_ticker_event() -> None:
-    """웹의 `/api/verify`가 이 이벤트를 보낸다 (F41). 티커는 `client_payload`에 실린다."""
-    assert "verify-ticker" in YML
+    """웹의 `/api/verify`가 이 이벤트를 보낸다 (F41). 티커는 `client_payload`에 실린다.
+
+    **`types:` 줄을 본다** — 이름이 주석에도 있어 문자열 검사로는 빠져도 통과했다
+    (변이 검사로 드러남, 2026-09-05).
+    """
+    assert "verify-ticker" in event_types()
     assert "github.event.client_payload.ticker" in YML
 
 
