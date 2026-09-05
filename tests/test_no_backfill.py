@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
@@ -58,6 +60,14 @@ def test_the_decision_and_its_materials_are_written_down() -> None:
 
 
 def test_the_upstream_replay_tool_still_exists() -> None:
-    """재료가 사라졌다면 「나중에 다시 꺼낸다」가 빈말이 된다 — 있는지 확인한다."""
-    dryrun = ROOT.parent / "krx-signal-alerts" / "scripts" / "dryrun.py"
+    """재료가 사라졌다면 「나중에 다시 꺼낸다」가 빈말이 된다 — 있는지 확인한다.
+
+    ⚠ **옆 리포는 로컬 워크스페이스에만 있다.** CI는 이 리포 하나만 받는다 —
+    2026-09-05 CI가 여기서 깨졐다(로컬은 통과). 검사할 대상이 없는 곳에서는 건너뛴다.
+    건너뜀은 사유가 남는다; 대상이 있는 곳(개발 맥)에서는 그대로 검사한다.
+    """
+    sibling = ROOT.parent / "krx-signal-alerts"
+    if not sibling.exists():
+        pytest.skip("옆 리포 krx-signal-alerts 가 체크아웃되지 않았다 (CI) — 로컬에서만 검사한다")
+    dryrun = sibling / "scripts" / "dryrun.py"
     assert dryrun.exists(), "상위 dryrun.py가 없다 — SPEC §2-3의 전제가 깨졌다"
