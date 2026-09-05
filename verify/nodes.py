@@ -33,6 +33,7 @@ from verify import (
     lanes,
     mcpc,
     news_mcp,
+    outcome,
     shorting,
     store,
     verdict,
@@ -178,7 +179,6 @@ def collect_lanes(
 _collect_lanes = collect_lanes
 
 STUB_NODES = (
-    "fill_outcomes",
     "aggregate",
     "explain",
     "render",
@@ -301,9 +301,6 @@ def _slice(ctx: Mapping[str, Any], sig: SignalRow) -> dict[str, Any]:
 # ── 스텁 — M0에서는 통과만 한다 ──────────────────────────────────
 
 
-def fill_outcomes(s: st.VerifyState) -> dict[str, Any]:
-    """도래한 구간의 사후 주가를 채운다 (M4). **게이트보다 앞에서 돈다.**"""
-    return {}
 
 
 def aggregate(s: st.VerifyState) -> dict[str, Any]:
@@ -358,6 +355,46 @@ def verdict_input_for(signal: SignalRow, evidence: Evidence | None) -> VerdictIn
         financial=ev.financial,
         shorting=ev.shorting,
     )
+
+
+def _fill_outcomes(day: date) -> int:
+    """아직 안 찬 판정에 관측 구간을 채운다 (F22·F23). 커넥션 수명이 여기서 끝난다."""
+    since = day - timedelta(days=store.OUTCOME_LOOKBACK_DAYS)
+    with store.connect() as conn, conn.cursor() as cur:
+        pending = store.fetch_pending(cur, since)
+        if not pending:
+            return 0
+        rows = [
+            (outcome.measure(d, ticker, market, *_bars_for(cur, ticker, market, d)), market)
+            for d, ticker, market in pending
+        ]
+        return store.save_outcomes(rows, conn=cur)
+
+
+def _bars_for(
+    cur: Any, ticker: str, market: str, since: date
+) -> tuple[list[outcome.DayBar], list[outcome.DayBar]]:
+    """그 종목과 소속 시장 지수의 일봉 (판정일 이후). **지수가 달력의 출처다.**"""
+    stock = cur.execute(store.Q_STOCK_BARS, (ticker, since)).fetchall()
+    index = cur.execute(store.Q_INDEX_BARS, (market, since)).fetchall()
+    return (
+        [outcome.DayBar(d=d, close=float(c), volume=int(v)) for d, c, v in stock],
+        [outcome.DayBar(d=d, close=float(c), volume=1) for d, c in index],
+    )
+
+
+def fill_outcomes(s: st.VerifyState) -> dict[str, Any]:
+    """어제까지의 판정에 관측 구간을 채운다 (F22). **게이트보다 앞에서 돈다.**
+
+    어제 판정 채점은 오늘 신호와 무관하다 — 게이트가 `stale`·`gate_timeout`으로 끝나는
+    날에도 채점은 돌아야 한다.
+
+    **예외를 밖으로 내지 않는다** (N11).
+    """
+    try:
+        return {"outcomes_filled": _fill_outcomes(s["run_date"])}
+    except Exception as exc:  # noqa: BLE001 — I/O 노드의 규칙
+        return {"outcomes_filled": 0, "errors": [f"관측 채우기 실패: {type(exc).__name__}: {exc}"]}
 
 
 def fetch_signals(s: st.VerifyState) -> dict[str, Any]:

@@ -25,7 +25,7 @@ from typing import Any, Protocol
 import psycopg
 
 from verify import config
-from verify.models import SignalRow, UpstreamRun, Verdict, VerdictPart
+from verify.models import Outcome, SignalRow, UpstreamRun, Verdict, VerdictPart
 
 
 def connect() -> psycopg.Connection[Any]:
@@ -269,4 +269,127 @@ def fetch_signals(conn: Queryable, run_date: date) -> list[SignalRow]:
                   name=str(name or ""), evidence=ev)
         for d, strategy, ticker, name, ev in rows
     ]
+
+# ── 적중 추적 (F22·F23·M4) ───────────────────────────────────────
+#
+# `ksv_verdicts`에서 배운 것을 그대로: **쓰는 열과 읽는 열이 한 곳에서 나온다.**
+# `market`은 `Outcome` 모델에 없고 스키마에만 있다 — 안 실으면 그 열이 늘 빈다.
+OUTCOME_COLUMNS: tuple[str, ...] = (
+    "d", "ticker", "market",
+    "h5", "h20", "h60",
+    "h5_index", "h20_index", "h60_index",
+)
+
+# 60거래일이 지나면 더 채울 것이 없다. 주말·휴장을 감안해 달력일로 넉넉히 잡는다 —
+# 3년치를 매일 훑지 않기 위한 상한이지, 정확할 필요는 없다.
+OUTCOME_LOOKBACK_DAYS = 150
+
+_OCOLS = ", ".join(OUTCOME_COLUMNS)
+_OKEYS = ("d", "ticker")
+# **이미 채운 값을 `None`으로 되돌리지 않는다.** 구간이 하나씩 도래하므로 같은 행을 매일 다시 쓴다.
+def _outcome_update(c: str) -> str:
+    """구간 값은 `coalesce`로 지킨다 — **이미 채운 것을 `None`으로 되돌리지 않는다.**"""
+    if c.startswith("h"):
+        return f"{c} = coalesce(excluded.{c}, ksv_outcomes.{c})"
+    return f"{c} = excluded.{c}"
+
+
+_OUPDATES = ", ".join(_outcome_update(c) for c in OUTCOME_COLUMNS if c not in _OKEYS)
+
+Q_OUTCOMES = f"""
+select {_OCOLS}
+from ksv_outcomes
+where d = %s
+order by ticker
+"""
+
+# 아직 60거래일이 안 찬 판정만. `source`는 안 가른다 — 온디맨드도 채점은 한다
+# (집계에서 빼는 것은 F43이 `fetch_verdicts` 쪽에서 한다).
+Q_PENDING = """
+select distinct v.d, v.ticker, coalesce(t.market, '')
+from ksv_verdicts v
+left join ksc_tickers t on t.ticker = v.ticker
+left join ksv_outcomes o on o.d = v.d and o.ticker = v.ticker
+where v.d >= %s and (o.h60 is null)
+order by v.d, v.ticker
+"""
+
+
+def outcome_row(o: Outcome, market: str) -> dict[str, Any]:
+    """관측 결과 → 저장 행. 키 순서가 `OUTCOME_COLUMNS`와 같다."""
+    return {
+        "d": o.d, "ticker": o.ticker, "market": market,
+        "h5": o.h5, "h20": o.h20, "h60": o.h60,
+        "h5_index": o.h5_index, "h20_index": o.h20_index, "h60_index": o.h60_index,
+    }
+
+
+def outcome_from_row(row: Sequence[Any]) -> tuple[Outcome, str]:
+    """저장 행 → `(Outcome, market)`. **`None`을 0으로 바꾸지 않는다.**"""
+    got = dict(zip(OUTCOME_COLUMNS, row, strict=True))
+    floats = {
+        k: (None if got[k] is None else float(got[k]))
+        for k in OUTCOME_COLUMNS
+        if k.startswith("h")
+    }
+    return (
+        Outcome(d=got["d"], ticker=str(got["ticker"]), **floats),
+        str(got["market"] or ""),
+    )
+
+
+def save_outcomes(
+    rows: Sequence[tuple[Outcome, str]], *, conn: Queryable | None = None
+) -> int:
+    """관측 결과를 저장한다 (F22). 청크로 나눠 보낸다.
+
+    Args:
+        rows: `(Outcome, market)` 목록.
+        conn: 커넥션 (없으면 직접 열고 **직접 커밋한다**).
+
+    Returns:
+        저장한 행 수.
+    """
+    if not rows:
+        return 0
+    made = [outcome_row(o, m) for o, m in rows]
+    if conn is not None:
+        return _write_outcomes(conn, made)
+    with connect() as own:
+        return _write_outcomes(own, made)
+
+
+def _write_outcomes(c: Queryable, rows: Sequence[dict[str, Any]]) -> int:
+    done = 0
+    for i in range(0, len(rows), CHUNK_ROWS):
+        chunk = rows[i : i + CHUNK_ROWS]
+        values = ", ".join(["(" + ", ".join(["%s"] * len(OUTCOME_COLUMNS)) + ")"] * len(chunk))
+        sql = (
+            f"insert into ksv_outcomes ({_OCOLS}) values {values} "
+            f"on conflict (d, ticker) do update set {_OUPDATES}, filled_at = now()"
+        )
+        try:
+            c.execute(sql, [x[col] for x in chunk for col in OUTCOME_COLUMNS])
+        except Exception as exc:
+            raise RuntimeError(f"관측 저장이 {done}행까지 가고 멈췄다: {exc}") from exc
+        done += len(chunk)
+    return done
+
+
+def fetch_pending(conn: Queryable, since: date) -> list[tuple[date, str, str]]:
+    """아직 60거래일이 안 찬 판정 `(d, ticker, market)`."""
+    return [(d, str(t), str(m)) for d, t, m in conn.execute(Q_PENDING, (since,)).fetchall()]
+
+# 일봉·지수 — 관측 구간 계산용. **지수가 달력의 출처다** (outcome.py 참고).
+Q_STOCK_BARS = """
+select d, c, v from ksc_bars
+where ticker = %s and timeframe = 'D' and d >= %s
+order by d
+"""
+
+Q_INDEX_BARS = """
+select d, c from ksc_index_bars
+where market = %s and d >= %s
+order by d
+"""
 
