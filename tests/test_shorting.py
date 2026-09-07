@@ -173,3 +173,10 @@ def test_llm_input_skips_shorting_without_data() -> None:
     sig = SignalRow(d=D, ticker="005930", name="삼성전자", strategy="vcp", evidence={})
     inp = VerdictInput(disclosures=(Disclosure(D, "주요사항보고서", "1"),), shorting=None)
     assert "shorting" not in analysis.build_input([(sig, inp, None)])[0]
+
+
+def test_prompt_pins_the_compound_wording() -> None:
+    """2026-09-07 실행에서 서술 3건이 「비중」 단독으로 N1에 걸렸다 — 「순매수」 때와 같은 유형."""
+    from verify import analysis
+
+    assert "「공매도 비중」" in analysis.SYSTEM_PROMPT
