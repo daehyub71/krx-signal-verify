@@ -63,6 +63,35 @@ limit 1
 """
 
 
+def fetch_signal_day(conn: Queryable, run_date: date) -> date | None:
+    """오늘 상위 실행이 신호에 붙인 날짜 (`data_date`).
+
+    상위는 **아침에 전 거래일 종가로** 신호를 낸다 — 월요일 실행이 `d = 금요일`이다.
+    `run_date`로 신호를 찾으면 늘 0건이다 (2026-09-07 실측).
+
+    Returns:
+        상위 기록이 없으면 None — 부르는 쪽이 `run_date`로 물러선다.
+    """
+    run = fetch_upstream_run(conn, run_date)
+    return run.data_date if run else None
+
+
+Q_HAS_RUN = """
+select 1 from ksv_runs
+where run_date = %s and status in ('ok', 'no_signals')
+limit 1
+"""
+
+
+def has_run(conn: Queryable, run_date: date) -> bool:
+    """오늘 이미 정상 종료한 실행이 있는가 — `--if-not-verified`의 판정.
+
+    판정 표(`ksv_verdicts.d`)는 **신호 날짜**라 실행 날짜로 보면 안 된다.
+    게이트 실패(`gate_timeout`·`stale_data`)는 「돌았다」로 치지 않는다 — 예비 cron이 다시 돈다.
+    """
+    return conn.execute(Q_HAS_RUN, (run_date,)).fetchone() is not None
+
+
 def fetch_upstream_run(conn: Queryable, run_date: date) -> UpstreamRun | None:
     """그날 상위가 돌았는지 본다 (F1).
 

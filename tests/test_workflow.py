@@ -118,8 +118,12 @@ def test_overlapping_runs_wait_instead_of_killing() -> None:
     assert "cancel-in-progress: false" in YML
 
 
-def test_already_verified_looks_at_the_database(monkeypatch: pytest.MonkeyPatch) -> None:
-    """**게이트는 이벤트가 아니라 DB를 믿는다** — 이 판정도 같다."""
+def test_already_verified_looks_at_the_run_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    """**게이트는 이벤트가 아니라 DB를 믿는다** — 이 판정도 같다. 보는 곳은 `ksv_runs`다.
+
+    판정 표로 보면 안 된다 — 판정 `d`는 **신호 날짜**(전 거래일)라 실행 날짜와 다르다
+    (M7 트러블슈팅 ④).
+    """
     from verify import main, store
 
     class Ctx:
@@ -129,40 +133,18 @@ def test_already_verified_looks_at_the_database(monkeypatch: pytest.MonkeyPatch)
         def __exit__(self, *exc: object) -> None:
             return None
 
-        def cursor(self) -> Ctx:
-            return self
+    asked: list[Any] = []
+
+    def has_run(conn: Any, d: Any) -> bool:
+        asked.append(d)
+        return True
 
     monkeypatch.setattr(store, "connect", Ctx)
-    monkeypatch.setattr(store, "fetch_verdicts", lambda cur, d, source="batch": {"005930": 1})
-    assert main._already_verified(date(2026, 9, 3)) is True
-    monkeypatch.setattr(store, "fetch_verdicts", lambda cur, d, source="batch": {})
-    assert main._already_verified(date(2026, 9, 3)) is False
-
-
-def test_already_verified_counts_batch_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    """온디맨드로 하나 넣은 것이 「오늘 배치를 돌렸다」가 되면 안 된다 (F43)."""
-    from verify import main, store
-
-    seen: list[Any] = []
-
-    class Ctx:
-        def __enter__(self) -> Ctx:
-            return self
-
-        def __exit__(self, *exc: object) -> None:
-            return None
-
-        def cursor(self) -> Ctx:
-            return self
-
-    def fetch(cur: Any, d: Any, source: str = "batch") -> dict[str, Any]:
-        seen.append(source)
-        return {}
-
-    monkeypatch.setattr(store, "connect", Ctx)
-    monkeypatch.setattr(store, "fetch_verdicts", fetch)
-    main._already_verified(date(2026, 9, 3))
-    assert seen == ["batch"]
+    monkeypatch.setattr(store, "has_run", has_run)
+    assert main._already_verified(date(2026, 9, 7)) is True
+    assert asked == [date(2026, 9, 7)]
+    monkeypatch.setattr(store, "has_run", lambda conn, d: False)
+    assert main._already_verified(date(2026, 9, 7)) is False
 
 
 def test_the_default_check_is_the_real_one() -> None:

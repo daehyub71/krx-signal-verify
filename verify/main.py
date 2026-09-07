@@ -87,15 +87,15 @@ def initial_state(args: argparse.Namespace) -> st.VerifyState:
 
 
 def _already_verified(run_date: date) -> bool:
-    """그날 배치 판정이 `ksv_verdicts`에 이미 있는가 (F43 — `batch`만 본다).
+    """오늘 이미 정상 종료한 실행이 `ksv_runs`에 있는가.
 
     예비 cron이 dispatch와 겹친 날, 두 번째 실행이 **메일을 두 번 보내지 않게** 한다.
-    온디맨드 행은 세지 않는다 — 궁금해서 하나 넣은 것이 「오늘 배치를 돌렸다」가 되면 안 된다.
+    판정 표로 보지 않는다 — 판정 `d`는 **신호 날짜**(전 거래일)라 실행 날짜와 다르다 (트러블슈팅 ④).
     """
     from verify import store  # main은 그래프 밖이라 여기서만 DB를 안다
 
-    with store.connect() as conn, conn.cursor() as cur:
-        return bool(store.fetch_verdicts(cur, run_date))
+    with store.connect() as conn:
+        return store.has_run(conn, run_date)
 
 
 def _mark_request(request_id: int, status: str, **kw: Any) -> None:

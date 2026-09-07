@@ -114,6 +114,7 @@ def test_ondemand_takes_only_that_ticker(monkeypatch: pytest.MonkeyPatch) -> Non
         SignalRow(d=run_date, strategy="mtf", ticker="000430", name="대원강업", evidence={}),
         SignalRow(d=run_date, strategy="vcp", ticker="005930", name="삼성전자", evidence={}),
     ])
+    monkeypatch.setattr(nodes, "_signal_day", lambda run_date: None)  # 상위 기록 없음 → run_date
     out = nodes.fetch_signals(
         cast(st.VerifyState, {"run_date": D, "mode": st.MODE_ONDEMAND, "ticker": "005930"})
     )
@@ -123,6 +124,7 @@ def test_ondemand_takes_only_that_ticker(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_an_ondemand_ticker_with_no_signal_is_empty(monkeypatch: pytest.MonkeyPatch) -> None:
     """그날 신호가 아니었던 종목 — 지어내지 않는다."""
     monkeypatch.setattr(nodes, "_fetch_signals", lambda run_date: [])
+    monkeypatch.setattr(nodes, "_signal_day", lambda run_date: None)  # 상위 기록 없음 → run_date
     out = nodes.fetch_signals(
         cast(st.VerifyState, {"run_date": D, "mode": st.MODE_ONDEMAND, "ticker": "005930"})
     )

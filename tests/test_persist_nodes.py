@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -69,8 +69,15 @@ def test_judge_saves_the_evidence_it_judged(monkeypatch: pytest.MonkeyPatch) -> 
 def test_judge_saves_verdicts_before_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
     """판정이 먼저다 — 증거 저장이 느려도 판정은 이미 있다."""
     order: list[str] = []
-    monkeypatch.setattr(nodes, "_save_verdicts", lambda *a, **k: order.append("verdicts") or 1)
-    monkeypatch.setattr(nodes, "_save_evidence", lambda *a, **k: order.append("evidence") or 1)
+
+    def noting(what: str) -> Any:
+        def _f(*a: Any, **k: Any) -> int:
+            order.append(what)
+            return 1
+        return _f
+
+    monkeypatch.setattr(nodes, "_save_verdicts", noting("verdicts"))
+    monkeypatch.setattr(nodes, "_save_evidence", noting("evidence"))
     nodes.judge(state())
     assert order == ["verdicts", "evidence"]
 
@@ -94,8 +101,7 @@ def test_judge_with_no_verdicts_saves_no_evidence(monkeypatch: pytest.MonkeyPatc
 
 def judged() -> st.VerifyState:
     s = state()
-    s.update(nodes.judge(s))
-    return s
+    return cast(st.VerifyState, {**s, **nodes.judge(s)})
 
 
 def test_explain_saves_the_kept_summaries(monkeypatch: pytest.MonkeyPatch) -> None:

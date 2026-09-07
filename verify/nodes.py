@@ -78,6 +78,12 @@ _save_summaries = store.save_summaries
 _save_run = store.save_run
 
 
+def _signal_day(run_date: date) -> date | None:
+    """온디맨드용 — 게이트가 없어 `data_date`가 상태에 없다. 상위 실행 기록에 묻는다."""
+    with store.connect() as conn:
+        return store.fetch_signal_day(conn, run_date)
+
+
 def _fetch_signals(run_date: date) -> list[SignalRow]:
     """그날 신호를 상위에서 읽는다 (F2). 커넥션 수명이 여기서 끝난다."""
     with store.connect() as conn, conn.cursor() as cur:
@@ -479,13 +485,24 @@ def fill_outcomes(s: st.VerifyState) -> dict[str, Any]:
         return {"outcomes_filled": 0, "errors": [f"관측 채우기 실패: {type(exc).__name__}: {exc}"]}
 
 
+def signal_day_of(s: st.VerifyState) -> date:
+    """신호를 찾을 날짜. **상위가 붙인 날짜**다 — 월요일 실행이 금요일 신호를 본다 (트러블슈팅 ④).
+
+    배치는 게이트가 준 `data_date`, 온디맨드(게이트 없음)는 상위 기록에 묻는다. 없으면 `run_date`.
+    """
+    day = s.get("data_date")
+    if not day and s.get("mode") == st.MODE_ONDEMAND:
+        day = _signal_day(s["run_date"])
+    return day or s["run_date"]
+
+
 def fetch_signals(s: st.VerifyState) -> dict[str, Any]:
     """그날 검증할 신호를 읽는다 (F2). 온디맨드면 그 종목 하나만 남긴다 (V8).
 
     **예외를 밖으로 내지 않는다** — raise하면 `record_run`에 못 가 실패 기록까지 사라진다.
     """
     try:
-        rows = _fetch_signals(s["run_date"])
+        rows = _fetch_signals(signal_day_of(s))
     except Exception as exc:  # noqa: BLE001 — I/O 노드의 규칙 (N11)
         return {"signals": [], "errors": [f"신호 조회 실패: {type(exc).__name__}: {exc}"]}
     want = s.get("ticker") or ""

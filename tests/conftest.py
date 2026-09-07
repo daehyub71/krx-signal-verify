@@ -108,6 +108,7 @@ SAVE_SEAMS = ("_save_verdicts", "_save_evidence", "_save_summaries", "_save_run"
 
 BLOCKED_SEAMS = (
     "_fetch_signals",
+    "_signal_day",
     "_fill_outcomes",
     "_discriminate",
     "_collect_lanes",
