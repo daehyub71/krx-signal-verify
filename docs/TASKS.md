@@ -19,10 +19,10 @@
 | M4 적중 추적 | `██████████` | 100% | 9/9 | ✅ 2026-09-05 |
 | M5 서술 + 메일 | `██████████` | 100% | 7/7 | ✅ 2026-09-05 |
 | M6 자동화 | `██████████` | 100% | 5/5 | ✅ 2026-09-05 |
-| M7 웹 4화면 | `█████████░` | 93% | 13/14 | 🔄 PAT 대기 |
+| M7 웹 4화면 | `██████████` | 100% | 14/14 | ✅ 2026-09-07 |
 | M8 상위 공매도 수집 | `░░░░░░░░░░` | 0% | 0/4 | 🔜 |
 | M9 마무리 | `░░░░░░░░░░` | 0% | 0/7 | 🔜 |
-| **전체** | `█████████░` | **87%** | **97/112** | 🔄 M7 |
+| **전체** | `█████████░` | **88%** | **98/112** | 🔄 M8 |
 
 범례: 🔜 대기 · 🔄 진행중 · ✅완료일
 
@@ -561,7 +561,7 @@ ksc_bars 안의 지수 행: 0 · 소수점 살아 있음(6687.21 / 813.50)
 - [x] **F52 종목 화면** — 다섯 갈래 순서 고정·빈 갈래 「생략 — 이유」·DART 링크(컴포넌트 테스트)·관측 5/20/60(미도래 —)·서술/⚠ 서술 생략 ✅ 2026-09-06 — 09-03 판정은 증거 저장 전이라 「이날의 증거가 저장되지 않았다」로 보인다(정상)
 - [x] **F53 이력 화면** — 날짜 목록·종목 검색·`rules_version` 열·판 경계 구분선·도래한 초과수익 ✅ 2026-09-06
 - [x] **F54 분별력 화면** — 사분위 띠+중앙값+n 라벨·불일치 빗금·n<30 「표본 부족」·숫자 표·종목 링크 없음·성과 요약 숫자 없음(소스 전체 금지어 테스트) ✅ 2026-09-06
-- [ ] **F41·F42 온디맨드** — `/api/verify`(INSERT queued → dispatch `verify-ticker` + `request_id` → 실패 시 failed) · 하루 5건 + 동시 1건은 서버가 센다 · 상단 바 패널(스텝퍼·5초 폴링) ✅ 코드 완료 2026-09-06 — **`VERIFY_DISPATCH_TOKEN`(fine-grained PAT · 대상 `krx-signal-verify` 1개 · Contents write, R8)을 사용자가 만들어 Vercel preview 환경변수로 넣어야 「요청 → 1분 내 결과」를 확인할 수 있다** (SPEC §9-5)
+- [x] **F41·F42 온디맨드** — `/api/verify`(INSERT queued → dispatch `verify-ticker` + `request_id` → 실패 시 failed) · 하루 5건 + 동시 1건은 서버가 센다 · 상단 바 패널(스텝퍼·5초 폴링) · `VERIFY_DISPATCH_TOKEN`(사용자 발급 PAT) Vercel preview 등록 ✅ 2026-09-07 — **왕복 실측**: POST 202 → 40초 running → **150초 done** 「불일치 31」(033790). SPEC §9-5 「1분 내」는 실제로 약 2.5분(콜드스타트+LLM) — 화면 문구 「약 1분」은 「1~3분」으로 고칠 것
 - [x] **F55** 하단 고정 띠 + `metadata.robots noindex` + `X-Robots-Tag` 헤더 ✅ 2026-09-06
 - [x] **확인 2종** — ① `.next/static` grep: `ksv_reader`·`pooler.supabase`·`KSV_READER`·`postgresql://`·비밀번호 값 전부 0건 ② `https://krx-signal-verify-dash.vercel.app` → 302 Vercel 인증(curl) · 프로덕션 도메인은 자리표시 「비공개」 · lint ✅ vitest 79 ✅ build ✅ · 로컬 `next start`로 실DB 4화면+API 응답 확인 ✅ 2026-09-06
 
@@ -618,7 +618,7 @@ ksc_bars 안의 지수 행: 0 · 소수점 살아 있음(6687.21 / 813.50)
 | ① | 2026-09-06 | **첫 `--prod` 배포 직후 `krx-signal-verify.vercel.app`이 200으로 판정 데이터를 그대로 보였다** (V10 위반) | Hobby 플랜은 프로덕션 도메인에 Vercel Authentication을 못 건다 — API PATCH `deploymentType: all` → 「not available on your plan for production deployments」. 기본값 `all_except_custom_domains`는 preview 배포·별칭만 막는다. **선행 `krx-signal-briefing.vercel.app`·`krx-signal-alerts.vercel.app`도 같은 이유로 공개 상태** | 프로덕션 배포 즉시 제거 → 프로덕션 자리에 자리표시 「비공개」(`scripts/vercel-placeholder`) → 진짜 앱은 preview 배포 + 별칭 `krx-signal-verify-dash.vercel.app`(302 → Vercel 인증) · **프로덕션 배포가 0개면 다음 배포가 프로덕션이 된다**(3회 실측) → `scripts/deploy_web.sh`가 자리표시 확인 → preview 확인 → 별칭 → 302 확인을 강제. SPEC V10 v0.8 정정. **선행 두 프로젝트는 별도 조치 필요(사용자 판단)** |
 | ② | 2026-09-06 | 백그라운드 `npm install`이 `web/`이 아닌 곳에서 돌아 워크스페이스 루트에 빈 `node_modules/`·`package-lock.json`이 생겼다 | 병렬 호출 사이에 셸 cwd가 달랐다 — `cd`가 같은 호출 안에 없었다 | 확인 후 삭제(루트의 옛 `.vite` 캐시도 함께 지워짐). **npm·vercel은 반드시 같은 호출 안에서 절대경로 `cd` 뒤에** |
 | ③ | 2026-09-06 | `vercel deploy`가 **선행 `krx-signal-briefing` 프로젝트로** 프리뷰 배포를 만들었다 | 직전 호출이 그 디렉토리로 `cd`한 상태가 남아 있었다 | 그 배포 제거 · 선행 리포에 생긴 `.vercel/`과 `.gitignore` 한 줄 되돌림(리포 clean 확인). ②와 같은 규칙 |
-| ④ | 2026-09-07 | **자동 배치가 한 번도 신호를 잡지 못했다** — 월요일 예비 cron이 `no_signals`(상위는 정상, 신호 36건) | 상위는 아침 실행에 **전 거래일 날짜**로 신호를 쓴다(월요일 → `d=09-04`). 이쪽은 `run_date=오늘`로 `ksa_signals`를 찾았다. 09-03 판정은 `--date`를 준 수동 실행이라 드러나지 않았다 | `signal_day_of` — 게이트의 `data_date`(온디맨드는 상위 기록)로 신호를 찾는다. `--if-not-verified`도 판정 표(신호 날짜) 대신 `ksv_runs`(실행 날짜)를 본다. 테스트 11개 (`test_signal_day.py`) |
+| ④ | 2026-09-07 | **자동 배치가 한 번도 신호를 잡지 못했다** — 월요일 예비 cron이 `no_signals`(상위는 정상, 신호 36건) | 상위는 아침 실행에 **전 거래일 날짜**로 신호를 쓴다(월요일 → `d=09-04`). 이쪽은 `run_date=오늘`로 `ksa_signals`를 찾았다. 09-03 판정은 `--date`를 준 수동 실행이라 드러나지 않았다 | `signal_day_of` — 게이트의 `data_date`(온디맨드는 상위 기록)로 신호를 찾는다. `--if-not-verified`도 판정 표(신호 날짜) 대신 `ksv_runs`(실행 날짜)를 본다. **같은 뿌리 셋 더**(첫 정상 배치에서 발견): 증거가 `d=실행일`로 저장·서술 UPDATE 0행·요청 `result_d`가 실행일 → 셋 다 신호 날짜로. 잘못 저장된 증거 18행 삭제 후 `dry_run+force`로 재생성. 테스트 14개 (`test_signal_day.py`) |
 | ⑤ | 2026-09-07 | 상위 `alert.yml` 「검증 깨우기」가 **HTTP 403** — dispatch가 온 적이 없다 | `BRIEFING_DISPATCH_TOKEN`은 `krx-signal-briefing` 전용 PAT라 이 리포 권한이 없다 | 사용자가 만든 `VERIFY_DISPATCH_TOKEN`(대상 이 리포 1개 · Contents write)을 상위 Secret으로 넣고 alert.yml이 그것을 쓰게 함(`2e0637e`). 같은 PAT를 웹 `/api/verify`도 쓴다 |
 
 ### 계승한 함정 (선행에서 값을 치른 것들)

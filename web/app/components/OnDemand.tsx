@@ -3,7 +3,7 @@
 /**
  * 온디맨드 입력 + 상태 패널 (F41·F42). 상단 바에 하나만 있다 — 어디서든 연다 (DESIGN §2-5).
  *
- * 흐름: 요청 접수 → 대기(Actions 깨움) → 처리 중(약 1분) → 완료(→ 종목) / 실패 / 신호 없음.
+ * 흐름: 요청 접수 → 대기(Actions 깨움) → 처리 중(1~3분, 2026-09-07 실측 2.5분) → 완료(→ 종목) / 실패 / 신호 없음.
  * 한도 숫자는 서버가 준 것을 보일 뿐이다 — 판단은 `/api/verify`가 한다.
  */
 
@@ -173,7 +173,7 @@ function Stepper({ status }: { status: Req["status"] }) {
 
 function Outcome({ req }: { req: Req }) {
   if (req.status === "queued" || req.status === "running") {
-    return <div className="mt-3 rounded-md border border-line bg-raise px-3 py-2 text-[13px] text-ink-2">공시 · 뉴스 · 수급 · 재무 갈래를 모으고 판정을 내는 중이다 (약 1분). 처리 중에는 새 요청을 받지 않는다.</div>;
+    return <div className="mt-3 rounded-md border border-line bg-raise px-3 py-2 text-[13px] text-ink-2">공시 · 뉴스 · 수급 · 재무 갈래를 모으고 판정을 내는 중이다 (1~3분 · 실측 2.5분). 처리 중에는 새 요청을 받지 않는다.</div>;
   }
   if (req.status === "failed") {
     const why = req.detail?.errors?.[0] ?? "배치가 정상 종료하지 않았다";
