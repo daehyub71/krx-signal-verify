@@ -22,6 +22,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from verify import config, graph
+from verify import nodes as graph_nodes
 from verify import state as st
 
 KST = ZoneInfo("Asia/Seoul")
@@ -159,8 +160,9 @@ def main(
     out = app.invoke(initial_state(args), {"recursion_limit": st.RECURSION_LIMIT})
 
     status = str(out.get("status", st.STATUS_FAILED))
+    # 결과 날짜는 **신호의 날짜**다 — 판정 `d`와 같아야 종목 화면 링크가 맞는다 (트러블슈팅 ④).
     note("failed" if status in FAILING else "done",
-         result_d=args.run_date, detail=_request_detail(out, status))
+         result_d=graph_nodes.signals_day(out), detail=_request_detail(out, status))
     for err in out.get("errors", []):
         print(f"⚠ {err}", file=sys.stderr)
     send = out.get("send")

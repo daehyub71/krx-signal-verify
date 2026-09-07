@@ -216,7 +216,10 @@ def test_request_is_marked_running_then_done() -> None:
     assert code == 0
     assert [(i, s) for i, s, _ in marker.calls] == [(7, "running"), (7, "done")]
     _, _, kw = marker.calls[1]
-    assert kw["result_d"] == date(2026, 9, 5)
+    # 결과 날짜는 실행일이 아니라 **신호의 날짜**다 (트러블슈팅 ④) — 스텁 신호의 d와 같다.
+    from tests.conftest import signal
+
+    assert kw["result_d"] == signal("000000", "종목0").d
     assert kw["detail"]["status"] == st.STATUS_OK
 
 

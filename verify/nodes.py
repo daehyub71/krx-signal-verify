@@ -183,8 +183,10 @@ def collect_lanes(
         holder["bodies"] = bodies
         return items or None
 
+    # 증거의 날짜는 **신호의 날짜**다 — 판정 `d`와 같아야 종목 화면이 찾는다. 수집 창(공시 30일·
+    # 보고서 선택)은 `run_date` 기준 — 신호 뒤에 나온 공시도 봐야 한다 (트러블슈팅 ④).
     got = lanes.collect(
-        d=run_date, ticker=sig.ticker,
+        d=sig.d, ticker=sig.ticker,
         disclosures=disclosures if corp_code else None,
         news=lambda: _news_of(sig.name) or None,
         flows=lambda: ctx.get("flows"),
@@ -485,6 +487,11 @@ def fill_outcomes(s: st.VerifyState) -> dict[str, Any]:
         return {"outcomes_filled": 0, "errors": [f"관측 채우기 실패: {type(exc).__name__}: {exc}"]}
 
 
+def signals_day(s: st.VerifyState) -> date:
+    """상태에 든 신호들의 날짜 — 판정·증거·서술이 같은 `d`를 쓴다. 신호가 없으면 `run_date`."""
+    return next((sig.d for sig in s.get("signals") or []), s["run_date"])
+
+
 def signal_day_of(s: st.VerifyState) -> date:
     """신호를 찾을 날짜. **상위가 붙인 날짜**다 — 월요일 실행이 금요일 신호를 본다 (트러블슈팅 ④).
 
@@ -613,7 +620,7 @@ def explain(s: st.VerifyState) -> dict[str, Any]:
                            "summary_error": " · ".join(dropped) if dropped else ""}
     # 걸러진 서술만 판정 행에 붙인다 — 종목 화면(F52)이 읽는다. 저장 실패는 서술을 데려가지 않는다.
     try:
-        _save_summaries(s["run_date"], kept, s.get("mode") or st.MODE_BATCH)
+        _save_summaries(signals_day(s), kept, s.get("mode") or st.MODE_BATCH)
     except Exception as exc:  # noqa: BLE001
         out["errors"] = [f"서술 저장 실패: {type(exc).__name__}: {exc}"]
     return out

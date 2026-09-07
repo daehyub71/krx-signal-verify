@@ -147,3 +147,66 @@ def test_already_verified_uses_the_run_log() -> None:
     src = inspect.getsource(m._already_verified)
     assert "store.has_run(" in src
     assert "fetch_verdicts" not in src
+
+
+# ── 같은 뿌리 — 증거·서술·요청 결과도 신호 날짜를 쓴다 ───────────
+#
+# 09-07 첫 정상 배치에서 판정은 `d=09-04`, 증거는 `d=09-07`로 저장돼 종목 화면이 「증거 없음」을
+# 보였고, 서술 UPDATE는 `d=09-07` 행을 찾아 **0행**(18건 전부 null), 요청 `result_d`도 실행일이었다.
+
+
+def test_evidence_dated_by_signal_windows_by_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    asked: list[date] = []
+
+    def disclosures_of(corp: str, day: date) -> Any:
+        asked.append(day)
+        return ((), ())
+
+    monkeypatch.setattr(nodes, "_disclosures_of", disclosures_of)
+    monkeypatch.setattr(nodes, "_news_of", lambda name: ())
+    ev, _, _ = nodes.collect_lanes(RUN, rows_for(SIGNAL)[0], {"corp": "00123456"})
+    assert ev.d == SIGNAL, "판정 d와 어긋나면 종목 화면이 증거를 못 찾는다"
+    assert asked == [RUN], "공시 30일 창은 오늘 기준 — 신호 뒤의 공시도 봐야 한다"
+
+
+def test_summaries_are_saved_under_the_signal_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    from verify.llm import Summary
+    from verify.models import Disclosure, Evidence
+
+    saved: list[tuple[Any, ...]] = []
+
+    def save(*a: Any, **k: Any) -> int:
+        saved.append(a)
+        return 1
+
+    monkeypatch.setattr(nodes, "_save_summaries", save)
+    text = '{"items": [{"ticker": "017890", "reason": "전환사채 발행 공시가 신호와 어긋난다."}]}'
+    monkeypatch.setattr(nodes, "_summarize", lambda items: Summary(text=text))
+    s: dict[str, Any] = {
+        "run_date": RUN, "mode": st.MODE_BATCH, "signals": rows_for(SIGNAL),
+        "evidence": [Evidence(d=SIGNAL, ticker="017890",
+                              disclosures=(Disclosure(SIGNAL, "전환사채권발행결정", "1"),))],
+        "errors": [],
+    }
+    s.update(nodes.judge(cast(st.VerifyState, s)))
+    nodes.explain(cast(st.VerifyState, s))
+    assert saved and saved[0][0] == SIGNAL, "run_date로 UPDATE하면 0행이다"
+
+
+def test_request_result_d_is_the_signal_day() -> None:
+    from tests.conftest import gate_returns, one_evidence, sent_ok
+
+    marks: list[dict[str, Any]] = []
+
+    def marker(request_id: int, status: str, **kw: Any) -> None:
+        marks.append({"status": status, **kw})
+
+    over: dict[str, Any] = {
+        "gate": gate_returns(st.GATE_READY),
+        "fetch_signals": lambda _s: {"signals": rows_for(SIGNAL)},
+        "fetch_one": one_evidence, "send_email": sent_ok,
+    }
+    m.main(["--ticker", "017890", "--request-id", "7", "--date", "20260907"],
+           overrides=over, request_marker=marker)
+    assert marks[-1]["status"] == "done"
+    assert marks[-1]["result_d"] == SIGNAL, "실행일이면 종목 화면 링크가 빈 날을 가리킨다"
