@@ -75,11 +75,23 @@ def _one(sig: Any, v: Any, ev: Any, summary: str) -> str:
     return "\n".join(lines)
 
 
-def html(d: date, items: Sequence[Any], url: str) -> str:
-    """메일 본문 (HTML). 예산을 넘칠 것 같으면 **줄이고 줄였다고 적는다.**"""
+def _run_note(run_on: date | None) -> str:
+    """실행일이 신호 날짜와 다를 때만 — 「월요일 메일인데 왜 금요일인가」에 답한다."""
+    return f" (신호 기준일 · {run_on.isoformat()} 실행)" if run_on else ""
+
+
+def html(d: date, items: Sequence[Any], url: str, run_on: date | None = None) -> str:
+    """메일 본문 (HTML). 예산을 넘칠 것 같으면 **줄이고 줄였다고 적는다.**
+
+    Args:
+        d: **신호의 날짜** — 판정·증거·웹 화면이 같은 날짜를 쓴다.
+        items: 종목 칸들.
+        url: 전문 보기 링크(그 날짜 화면).
+        run_on: 실행일이 `d`와 다르면 함께 적는다.
+    """
     shown, cut = list(items)[:MAX_ITEMS], max(0, len(items) - MAX_ITEMS)
     head = [
-        f"<h2>{d.isoformat()} 신호 검증</h2>",
+        f"<h2>{d.isoformat()} 신호 검증{_html.escape(_run_note(run_on))}</h2>",
         f"<p><i>{_limit_note(items)}</i></p>",  # 앞쪽에 둔다 — 잘려도 남게
         f'<p><a href="{_html.escape(url)}">전문 보기</a></p>',
     ]
@@ -90,10 +102,10 @@ def html(d: date, items: Sequence[Any], url: str) -> str:
     return "\n".join(head + [_one(*x) for x in shown])
 
 
-def text(d: date, items: Sequence[Any], url: str) -> str:
+def text(d: date, items: Sequence[Any], url: str, run_on: date | None = None) -> str:
     """메일 본문 (평문). HTML을 못 보는 곳을 위한 것이라 더 짧다."""
     shown = list(items)[:MAX_ITEMS]
-    out = [f"{d.isoformat()} 신호 검증", _limit_note(items), url, ""]
+    out = [f"{d.isoformat()} 신호 검증{_run_note(run_on)}", _limit_note(items), url, ""]
     for sig, v, _, summary in shown:
         out.append(f"{sig.name}({sig.ticker}) {v.stand} {v.score}점 — {summary or '서술 생략'}")
     if len(items) > MAX_ITEMS:

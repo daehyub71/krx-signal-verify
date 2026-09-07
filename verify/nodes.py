@@ -113,11 +113,22 @@ def _financials(corp_codes: Sequence[str], day: date) -> dict[str, Any]:
     return financial.read_all(dart_fin.fetch_accounts(list(corp_codes), day))
 
 
-def _shorting_state() -> Any:
-    """공매도 갈래의 상태 (F32). M8 전까지 `MISSING`이라 값이 없다."""
+def _shortings(tickers: Sequence[str]) -> dict[str, Any] | None:
+    """종목들의 공매도 20거래일 (F32 · M8). 상태를 먼저 가른다 (R6).
+
+    Returns:
+        `MISSING`이면 None(없는 층 — 조용히 「생략」). `READY`면 `{ticker: Shorting}`.
+
+    Raises:
+        RuntimeError: `EMPTY` — 표는 있는데 0행. 「없음」이 아니라 수집 실패라 소리를 낸다.
+    """
     with store.connect() as conn, conn.cursor() as cur:
-        got = shorting.probe(cur)
-    return None if got.state == shorting.MISSING else got
+        state = shorting.probe(cur)
+        if state.state == shorting.MISSING:
+            return None
+        if state.state == shorting.EMPTY:
+            raise RuntimeError(state.reason)
+        return shorting.read_all(cur, tickers)
 
 
 def prefetch(signals: Sequence[SignalRow], day: date) -> dict[str, Any]:
@@ -136,7 +147,8 @@ def prefetch(signals: Sequence[SignalRow], day: date) -> dict[str, Any]:
     fins = _guarded("재무", lambda: _financials(codes, day), errors) if codes else {}
     return {
         "corps": corps, "flows": flows, "quotes": quotes,
-        "financials": fins or {}, "shorting": _guarded("공매도", _shorting_state, errors),
+        "financials": fins or {},
+        "shorting": _guarded("공매도", lambda: _shortings(tickers), errors),
         "errors": errors,
     }
 
@@ -281,11 +293,15 @@ def _mail_items(s: st.VerifyState) -> list[tuple[Any, Any, Any, str]]:
 def render(s: st.VerifyState) -> dict[str, Any]:
     """메일 본문을 만든다 (F50·N9). **간략하게** — 전문은 웹으로 유도한다."""
     items = _mail_items(s)
-    url = config.optional("DASHBOARD_URL")
+    # 날짜는 **신호의 날짜**다(트러블슈팅 ④). 실행일이 다르면 함께 적고, 링크는 그 날짜 화면으로.
+    day = signals_day(s)
+    base = config.optional("DASHBOARD_URL")
+    url = f"{base.rstrip('/')}/?d={day.isoformat()}" if base else ""
+    run_on = s["run_date"] if s["run_date"] != day else None
     return {
-        "subject": rendering.subject(s["run_date"], len(items)),
-        "text": rendering.text(s["run_date"], items, url),
-        "html": rendering.html(s["run_date"], items, url),
+        "subject": rendering.subject(day, len(items)),
+        "text": rendering.text(day, items, url, run_on=run_on),
+        "html": rendering.html(day, items, url, run_on=run_on),
     }
 
 
@@ -364,7 +380,7 @@ def _slice(ctx: Mapping[str, Any], sig: SignalRow) -> dict[str, Any]:
         "corp": corp_code,
         "flows": (ctx.get("flows") or {}).get(sig.ticker),
         "financial": (ctx.get("financials") or {}).get(corp_code),
-        "shorting": ctx.get("shorting"),
+        "shorting": (ctx.get("shorting") or {}).get(sig.ticker),
     }
 
 

@@ -46,6 +46,7 @@ SYSTEM_PROMPT = """너는 한국 주식의 차트 신호가 근거를 갖는지 
 - disclosures / bodies: 최근 공시 제목과, 위험 유형에 걸린 공시의 본문
 - news: 같은 기간 뉴스 제목과 기사 요약
 - flows: 기관·외국인·개인 순매수(원). 음수는 순매도다
+- shorting: 공매도 비중(%) = 공매도 거래량 / 매수 거래량. 20거래일 평균과 최근 값
 - verdict: **코드가 규칙으로 낸 판정과 점수, 그리고 그 근거 조각**
 
 네가 할 일은 verdict를 **설명**하는 것이다. 세 갈래(공시·뉴스·수급)가 차트 신호를
@@ -197,6 +198,14 @@ def build_input(items: Sequence[Item]) -> list[dict[str, Any]]:
             }
         if b.anomaly is not None:
             item["anomaly"] = {"score": b.anomaly.score, "verdict": b.anomaly.verdict}
+        short: Any = b.shorting  # `VerdictInput.shorting`은 object — 저장 형태와 떼어 둔 자리
+        if short is not None and getattr(short, "days", None):
+            last = short.days[-1]
+            item["shorting"] = {
+                "unit": "%",
+                "avg_ratio_20d": short.avg_ratio,
+                "latest": {"date": _md(last.d), "ratio": last.ratio, "short_vol": last.short_vol},
+            }
         if v is not None:
             item["verdict"] = {
                 "stand": v.stand,

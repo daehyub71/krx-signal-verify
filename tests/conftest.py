@@ -117,7 +117,7 @@ BLOCKED_SEAMS = (
     "_corp_codes",
     "_upstream",
     "_financials",
-    "_shorting_state",
+    "_shortings",
     "_summarize",
     "_send",
 )

@@ -45,7 +45,7 @@ def test_batched_sources_are_asked_once_for_everyone(monkeypatch: pytest.MonkeyP
 
     monkeypatch.setattr(nodes, "_upstream", db)
     monkeypatch.setattr(nodes, "_financials", fin)
-    monkeypatch.setattr(nodes, "_shorting_state", lambda: None)
+    monkeypatch.setattr(nodes, "_shortings", lambda tickers: None)
 
     ctx = nodes.prefetch([sig("005930"), sig("000660", "SK하이닉스")], D)
     assert calls == [("db", 2), ("fin", 2)]  # 두 종목을 한 번에
@@ -60,7 +60,7 @@ def test_prefetch_survives_a_dead_source(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(nodes, "_corp_codes", boom)
     monkeypatch.setattr(nodes, "_upstream", lambda tks: ({"005930": "수급"}, {}))
     monkeypatch.setattr(nodes, "_financials", lambda corps, day: {})
-    monkeypatch.setattr(nodes, "_shorting_state", lambda: None)
+    monkeypatch.setattr(nodes, "_shortings", lambda tickers: None)
 
     ctx = nodes.prefetch([sig()], D)
     assert ctx["corps"] == {}  # 공시·재무는 못 하지만

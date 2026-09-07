@@ -5,7 +5,7 @@
  * 공시·뉴스 제목은 남이 쓴 원문이라 그대로 싣는다. 공시에는 DART 원문 링크가 반드시 붙는다 (N3).
  */
 
-import type { Anomaly, Disclosure, EventBody, EvidenceRow, Financial, InvestorFlows, NewsItem, OutcomeRow } from "@/lib/types";
+import type { Anomaly, Disclosure, EventBody, EvidenceRow, Financial, InvestorFlows, NewsItem, OutcomeRow, Shorting } from "@/lib/types";
 import { DASH, md, pct, pctPoint, won, wonPlain } from "@/lib/format";
 import { horizonCells } from "@/lib/view";
 
@@ -193,11 +193,32 @@ export function FinancialLane({ fin, stored }: { fin: Financial | null; stored: 
 
 // ── 5 공매도 ──────────────────────────────────────────────────────
 
-export function ShortingLane({ shorting, stored }: { shorting: unknown | null; stored: boolean }) {
+export function ShortingLane({ shorting, stored }: { shorting: Shorting | null; stored: boolean }) {
+  const days = shorting?.days ?? [];
+  const recent = [...days].sort((a, b) => (a.d < b.d ? 1 : -1)).slice(0, 10);
+  const maxRatio = Math.max(1, ...days.map((x) => x.ratio));
+  const avg = days.length ? days.reduce((s, x) => s + x.ratio, 0) / days.length : null;
+  const last = days.length ? [...days].sort((a, b) => (a.d < b.d ? 1 : -1))[0] : null;
   return (
-    <Lane n={5} title="공매도 · 20거래일">
-      {!stored ? <Skip why={NO_EVIDENCE} /> : shorting === null ? <Skip why="상위가 아직 수집하지 않는다 (M8 전). 자리는 남긴다" /> : (
-        <div className="text-[13px] text-ink-2">{JSON.stringify(shorting).slice(0, 400)}</div>
+    <Lane n={5} title="공매도 · 20거래일 · 공매도 비중(%)">
+      {!stored ? <Skip why={NO_EVIDENCE} /> : shorting === null ? <Skip why="그날 공매도 통계에 이 종목이 없다 (상위 미수집 또는 대상 밖)" /> : days.length === 0 ? (
+        <div className="text-[13px] text-ink-2">20거래일 안에 공매도 행이 없다</div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1 text-[13px]">
+            {recent.map((x) => (
+              <div key={x.d} className="flex items-center gap-2.5">
+                <span className="mono w-[44px] text-muted">{md(x.d)}</span>
+                <span className="h-2.5 rounded-sm" style={{ width: `${Math.max(2, Math.round((x.ratio / maxRatio) * 100))}%`, maxWidth: 120, background: "var(--ink-2)" }} />
+                <span className="mono w-[64px] text-right">{x.ratio.toFixed(2)}%</span>
+                <span className="mono w-[92px] text-right text-muted">{x.short_vol.toLocaleString("ko-KR")}주</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-1 text-[13px] text-ink-2">
+            {days.length}거래일 공매도 비중 평균 <span className="mono">{avg!.toFixed(2)}%</span>{last ? <> · 최근 <span className="mono">{last.ratio.toFixed(2)}%</span></> : null}
+          </div>
+        </>
       )}
     </Lane>
   );

@@ -72,10 +72,21 @@ describe("나머지 갈래 — 빈 갈래도 자리를 남긴다", () => {
     expect(h).toContain("+25.0%");
     expect(h).toContain("120.4%");
   });
-  it("공매도는 M8 전까지 생략 — 자리는 남는다", () => {
+  it("공매도 — 없는 종목은 생략, 자리는 남는다", () => {
     const h = html(<ShortingLane shorting={null} stored />);
     expect(h).toContain("5 공매도");
-    expect(h).toContain("생략 — 상위가 아직 수집하지 않는다");
+    expect(h).toContain("생략 — 그날 공매도 통계에 이 종목이 없다");
+  });
+  it("공매도 — 20거래일 비중 막대와 평균", () => {
+    const days = [
+      { d: "2026-09-03", short_vol: 300000, buy_vol: 18000000, ratio: 1.6 },
+      { d: "2026-09-04", short_vol: 368918, buy_vol: 18649816, ratio: 1.98 },
+    ];
+    const h = html(<ShortingLane shorting={{ state: "ready", reason: "", rows: 2, days }} stored />);
+    expect(h).toContain("1.98%");
+    expect(h).toContain("368,918주");
+    expect(h).toContain("2거래일 공매도 비중 평균");
+    expect(h).toContain("1.79%");
   });
 });
 

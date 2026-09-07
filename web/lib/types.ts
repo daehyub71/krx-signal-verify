@@ -96,6 +96,21 @@ export interface Anomaly {
   flags: string[];
 }
 
+export interface ShortDay {
+  d: string;
+  short_vol: number;
+  buy_vol: number;
+  ratio: number;
+}
+
+/** 공매도 갈래 — 상위 `ksc_shorting` 20거래일 (F32). `days`는 날짜 오름차순. */
+export interface Shorting {
+  state: string;
+  reason: string;
+  rows: number;
+  days: ShortDay[];
+}
+
 export interface EvidenceRow {
   d: string;
   ticker: string;
@@ -103,7 +118,7 @@ export interface EvidenceRow {
   news: NewsItem[] | null;
   flows: InvestorFlows | null;
   financial: Financial | null;
-  shorting: unknown | null;
+  shorting: Shorting | null;
   bodies: EventBody[] | null;
   anomaly: Anomaly | null;
   missing: string[];

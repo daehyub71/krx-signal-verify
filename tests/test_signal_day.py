@@ -210,3 +210,29 @@ def test_request_result_d_is_the_signal_day() -> None:
            overrides=over, request_marker=marker)
     assert marks[-1]["status"] == "done"
     assert marks[-1]["result_d"] == SIGNAL, "실행일이면 종목 화면 링크가 빈 날을 가리킨다"
+
+
+# ── 메일도 신호 날짜를 쓴다 — 「월요일 메일인데 왜 금요일인가」 ──────
+
+
+def test_mail_is_dated_by_the_signal_and_links_to_that_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    from verify import config
+
+    monkeypatch.setattr(config, "optional", lambda k: "https://dash.example/")
+    s: dict[str, Any] = {"run_date": RUN, "signals": rows_for(SIGNAL), "verdicts": {},
+                         "evidence": [], "summaries": {}}
+    out = nodes.render(cast(st.VerifyState, s))
+    assert "09-04" in out["subject"] and "09-07" not in out["subject"]
+    assert "2026-09-04 신호 검증 (신호 기준일 · 2026-09-07 실행)" in out["html"]
+    assert 'href="https://dash.example/?d=2026-09-04"' in out["html"]
+    assert "https://dash.example/?d=2026-09-04" in out["text"]
+
+
+def test_mail_omits_the_run_note_when_dates_agree(monkeypatch: pytest.MonkeyPatch) -> None:
+    from verify import config
+
+    monkeypatch.setattr(config, "optional", lambda k: "")
+    s: dict[str, Any] = {"run_date": SIGNAL, "signals": rows_for(SIGNAL), "verdicts": {},
+                         "evidence": [], "summaries": {}}
+    out = nodes.render(cast(st.VerifyState, s))
+    assert "실행)" not in out["html"]
